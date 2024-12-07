@@ -17,10 +17,11 @@ Kode ini masih perlu banyak perbaikan, jadi silahkan berkontribusi dan berikan P
 
 1. Buat akun cloudflare
 2. Buat worker
-3. Masukkan link daftar proxy kalian ke dalam environemnt variable `PROXY_BANK_URL`
-4. (Optional) Masukkan link target reverse proxy ke environment variable `REVERSE_PROXY_TARGET`
-5. Deploy
-6. Buka `https://DOMAIN_WORKER_KALIAN/sub`
+3. Copy kode dari `worker.js` ke editor cloudflare worker
+4. Masukkan link daftar proxy kalian ke dalam environemnt variable `PROXY_BANK_URL`
+5. (Optional) Masukkan link target reverse proxy ke environment variable `REVERSE_PROXY_TARGET`
+6. Deploy
+7. Buka `https://DOMAIN_WORKER_KALIAN/sub`
 
 - Contoh daftar proxy [proxyList.txt](https://raw.githubusercontent.com/dickymuliafiqri/Nautica/refs/heads/main/proxyList.txt)
 - Contoh reverse proxy [example.com](https://example.com)
