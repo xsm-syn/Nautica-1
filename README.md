@@ -22,6 +22,9 @@ Kode ini masih perlu banyak perbaikan, jadi silahkan berkontribusi dan berikan P
 5. Deploy
 6. Buka `https://DOMAIN_WORKER_KALIAN/sub`
 
+- Contoh daftar proxy [proxyList.txt](https://raw.githubusercontent.com/dickymuliafiqri/Nautica/refs/heads/main/proxyList.txt)
+- Contoh reverse proxy [example.com](https://example.com)
+
 # Endpoint
 
 - `/` -> Halaman utama reverse proxy
@@ -29,5 +32,5 @@ Kode ini masih perlu banyak perbaikan, jadi silahkan berkontribusi dan berikan P
 
 # Footnote
 
-- Hal aneh dan anomali lain yang saya lakukan [FoolVPN]("t.me/foolvpn")
-- Contact Person [Telegram]("t.me/d_fordlalatina")
+- Hal aneh dan anomali lain yang saya lakukan [FoolVPN](https://t.me/foolvpn)
+- Contact Person [Telegram](https://t.me/d_fordlalatina)
