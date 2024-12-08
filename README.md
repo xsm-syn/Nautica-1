@@ -4,16 +4,23 @@ Sebuah repository serverless tunnel studi kasus Indonesia
 
 # Fitur
 
-- [x] Otomatis split protocol VLESS dan Trojan
+- [x] Otomatis split protocol VLESS, Trojan, dan Shadowsocks
 - [x] Reverse proxy
 - [x] Cache daftar proxy
-- [x] Support TCP/UDP (UDP hanya untuk resolve DNS)
+- [x] Support TCP dan DoH
+- [x] Transport Websocket CDN dan SNI
 
-# Todo
+# Todo (Belum Selesai)
 
 - [x] Lebih efisien (Partial) (I hate Javascript btw, jadi males buat benerin)
+- [ ] Skema URL shadowsocks
 
 Kode ini masih perlu banyak perbaikan, jadi silahkan berkontribusi dan berikan PR kalian!
+
+# Catatan
+
+- Harus UUID v4 Variant 2
+- Gunakan security `none`
 
 # Cara Deploy
 
@@ -27,10 +34,6 @@ Kode ini masih perlu banyak perbaikan, jadi silahkan berkontribusi dan berikan P
 
 - Contoh daftar proxy [proxyList.txt](https://raw.githubusercontent.com/dickymuliafiqri/Nautica/refs/heads/main/proxyList.txt)
 - Contoh reverse proxy [example.com](https://example.com)
-
-# Catatan
-
-- Hanya mendukung UUID v4
 
 # Endpoint
 

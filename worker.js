@@ -62,7 +62,7 @@ function getAllConfig(hostName, proxyList) {
   try {
     const uuid = crypto.randomUUID();
     const ports = [443, 80];
-    const protocols = ["trojan", "vless"];
+    const protocols = ["trojan", "vless", "ss"];
 
     let html = "";
 
@@ -82,6 +82,11 @@ function getAllConfig(hostName, proxyList) {
       for (const port of ports) {
         uri.port = port.toString();
         for (const protocol of protocols) {
+          // Special exceptions
+          if (protocol === "ss") {
+            uri.username = btoa(`none:${uuid}`);
+          }
+
           uri.protocol = protocol;
           uri.searchParams.set("security", port == 443 ? "tls" : "none");
           uri.searchParams.set("sni", port == 80 && protocol == "vless" ? "" : hostName);
@@ -179,7 +184,10 @@ async function websockerHandler(request) {
             protocolHeader = parseTrojanHeader(chunk);
           } else if (protocol === "VLESS") {
             protocolHeader = parseVlessHeader(chunk);
+          } else if (protocol === "Shadowsocks") {
+            protocolHeader = parseShadowsocksHeader(chunk);
           } else {
+            parseVmessHeader(chunk);
             throw new Error("Unknown Protocol!");
           }
 
@@ -247,11 +255,11 @@ async function protocolSniffer(buffer) {
 
   const vlessDelimiter = new Uint8Array(buffer.slice(1, 17));
   // Hanya mendukung UUID v4
-  if (arrayBufferToHex(vlessDelimiter).match(/^\w{8}\w{4}4\w{3}\w{4}\w{12}$/)) {
+  if (arrayBufferToHex(vlessDelimiter).match(/^\w{8}\w{4}4\w{3}[89ab]\w{3}\w{12}$/)) {
     return "VLESS";
   }
 
-  return "Unknown";
+  return "Shadowsocks"; // default
 }
 
 async function handleTCPOutBound(
@@ -338,6 +346,66 @@ function makeReadableWebSocketStream(webSocketServer, earlyDataHeader, log) {
   });
 
   return stream;
+}
+
+function parseVmessHeader(vmessBuffer) {
+  // https://xtls.github.io/development/protocols/vmess.html#%E6%8C%87%E4%BB%A4%E9%83%A8%E5%88%86
+}
+
+function parseShadowsocksHeader(ssBuffer) {
+  const view = new DataView(ssBuffer);
+
+  const addressType = view.getUint8(0);
+  let addressLength = 0;
+  let addressValueIndex = 1;
+  let addressValue = "";
+
+  switch (addressType) {
+    case 1:
+      addressLength = 4;
+      addressValue = new Uint8Array(ssBuffer.slice(addressValueIndex, addressValueIndex + addressLength)).join(".");
+      break;
+    case 3:
+      addressLength = new Uint8Array(ssBuffer.slice(addressValueIndex, addressValueIndex + 1))[0];
+      addressValueIndex += 1;
+      addressValue = new TextDecoder().decode(ssBuffer.slice(addressValueIndex, addressValueIndex + addressLength));
+      break;
+    case 4:
+      addressLength = 16;
+      const dataView = new DataView(ssBuffer.slice(addressValueIndex, addressValueIndex + addressLength));
+      const ipv6 = [];
+      for (let i = 0; i < 8; i++) {
+        ipv6.push(dataView.getUint16(i * 2).toString(16));
+      }
+      addressValue = ipv6.join(":");
+      break;
+    default:
+      return {
+        hasError: true,
+        message: `Invalid addressType for Shadowsocks: ${addressType}`,
+      };
+  }
+
+  if (!addressValue) {
+    return {
+      hasError: true,
+      message: `Destination address empty, address type is: ${addressType}`,
+    };
+  }
+
+  const portIndex = addressValueIndex + addressLength;
+  const portBuffer = ssBuffer.slice(portIndex, portIndex + 2);
+  const portRemote = new DataView(portBuffer).getUint16(0);
+  return {
+    hasError: false,
+    addressRemote: addressValue,
+    addressType: addressType,
+    portRemote: portRemote,
+    rawDataIndex: portIndex + 2,
+    rawClientData: ssBuffer.slice(portIndex + 2),
+    version: null,
+    isUDP: portRemote == 53,
+  };
 }
 
 function parseVlessHeader(vlessBuffer) {
