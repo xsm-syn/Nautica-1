@@ -66,7 +66,7 @@ function getAllConfig(hostName, proxyList) {
 
     let html = "";
 
-    const uri = new URL(`trojan://${uuid}@${hostName}`);
+    const uri = new URL(`trojan://${hostName}`);
     uri.searchParams.set("encryption", "none");
     uri.searchParams.set("type", "ws");
     uri.searchParams.set("host", hostName);
@@ -85,6 +85,8 @@ function getAllConfig(hostName, proxyList) {
           // Special exceptions
           if (protocol === "ss") {
             uri.username = btoa(`none:${uuid}`);
+          } else {
+            uri.username = uuid;
           }
 
           uri.protocol = protocol;
