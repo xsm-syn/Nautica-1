@@ -8,7 +8,9 @@ Sebuah repository serverless tunnel studi kasus Indonesia
 - [x] Reverse proxy
 - [x] Cache daftar proxy
 - [x] Support TCP/UDP (UDP hanya untuk resolve DNS)
-- [ ] Support HU (HTTP Upgrade)
+
+# Todo
+
 - [x] Lebih efisien (Partial) (I hate Javascript btw, jadi males buat benerin)
 
 Kode ini masih perlu banyak perbaikan, jadi silahkan berkontribusi dan berikan PR kalian!
@@ -25,6 +27,10 @@ Kode ini masih perlu banyak perbaikan, jadi silahkan berkontribusi dan berikan P
 
 - Contoh daftar proxy [proxyList.txt](https://raw.githubusercontent.com/dickymuliafiqri/Nautica/refs/heads/main/proxyList.txt)
 - Contoh reverse proxy [example.com](https://example.com)
+
+# Catatan
+
+- Hanya mendukung UUID v4
 
 # Endpoint
 

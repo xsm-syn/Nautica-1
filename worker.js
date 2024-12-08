@@ -113,7 +113,6 @@ export default {
 
         if (proxyMatch) {
           proxyIP = proxyMatch[1];
-          await getProxyList(env);
           return await websockerHandler(request);
         }
       }
@@ -235,13 +234,24 @@ async function websockerHandler(request) {
 }
 
 async function protocolSniffer(buffer) {
-  if (buffer.byteLength >= 56) {
-    const trojanDelimiter = new Uint8Array(buffer.slice(56, 58));
+  if (buffer.byteLength >= 62) {
+    const trojanDelimiter = new Uint8Array(buffer.slice(56, 60));
     if (trojanDelimiter[0] === 0x0d && trojanDelimiter[1] === 0x0a) {
-      return "Trojan";
+      if (trojanDelimiter[2] === 0x01 || trojanDelimiter[2] === 0x03 || trojanDelimiter[2] === 0x7f) {
+        if (trojanDelimiter[3] === 0x01 || trojanDelimiter[3] === 0x03 || trojanDelimiter[3] === 0x04) {
+          return "Trojan";
+        }
+      }
     }
   }
-  return "VLESS"; // Default protocol
+
+  const vlessDelimiter = new Uint8Array(buffer.slice(1, 17));
+  // Hanya mendukung UUID v4
+  if (arrayBufferToHex(vlessDelimiter).match(/^\w{8}\w{4}4\w{3}\w{4}\w{12}$/)) {
+    return "VLESS";
+  }
+
+  return "Unknown";
 }
 
 async function handleTCPOutBound(
@@ -524,6 +534,10 @@ function base64ToArrayBuffer(base64Str) {
   } catch (error) {
     return { error };
   }
+}
+
+function arrayBufferToHex(buffer) {
+  return [...new Uint8Array(buffer)].map((x) => x.toString(16).padStart(2, "0")).join("");
 }
 
 async function handleUDPOutbound(webSocket, responseHeader, log) {
