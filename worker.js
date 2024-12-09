@@ -79,14 +79,17 @@ function getAllConfig(hostName, proxyList, page = 0) {
     const ports = [443, 80];
     const protocols = ["trojan", "vless", "ss"];
 
-    let html = `Page ${page} of ${Math.floor(proxyList.length / 10)}</br>`;
-    html += `Total ProxyIP: ${proxyList.length}</br>`;
-    html += `Proxy per-Page: ${PROXY_PER_PAGE}</br>`;
-
+    // Build URI
     const uri = new URL(`trojan://${hostName}`);
     uri.searchParams.set("encryption", "none");
     uri.searchParams.set("type", "ws");
     uri.searchParams.set("host", hostName);
+
+    // Build HTML
+    const document = new Document();
+    document.setTitle("Welcome to Nautica");
+    document.addInfo(`Total: ${proxyList.length}`);
+    document.addInfo(`Page: ${page}/${Math.floor(proxyList.length / PROXY_PER_PAGE)}`);
 
     for (let i = startIndex; i < startIndex + PROXY_PER_PAGE; i++) {
       const proxy = proxyList[i];
@@ -94,12 +97,11 @@ function getAllConfig(hostName, proxyList, page = 0) {
 
       const { proxyIP, proxyPort, country, org } = proxy;
 
-      html += `<h3>${country} ${org}</h3>`;
-
       uri.searchParams.set("path", `/${proxyIP}-${proxyPort}`);
       uri.hash = `${country} ${org}`;
 
       for (const port of ports) {
+        const proxies = [];
         uri.port = port.toString();
         for (const protocol of protocols) {
           // Special exceptions
@@ -113,17 +115,19 @@ function getAllConfig(hostName, proxyList, page = 0) {
           uri.searchParams.set("security", port == 443 ? "tls" : "none");
           uri.searchParams.set("sni", port == 80 && protocol == "vless" ? "" : hostName);
 
-          // Build
-          html += `${uri.toString()}</br>`;
+          // Build VPN URI
+          proxies.push(uri.toString());
         }
-
-        html += "</br>";
+        document.addProxyGroup(`${country} ${org} : ${port}`, proxies);
       }
-
-      html += "<hr>";
     }
 
-    return html;
+    // Build pagination
+    document.addPageButton("Prev", `/sub/${page > 0 ? page - 1 : 0}`, page > 0 ? false : true, false);
+    document.addPageButton(page, "#", false, true);
+    document.addPageButton("Next", `/sub/${page + 1}`, page < Math.floor(proxyList.length / 10) ? false : true, false);
+
+    return document.build();
   } catch (error) {
     return `An error occurred while generating the VLESS configurations. ${error}`;
   }
@@ -703,4 +707,87 @@ async function generateHashFromText(text) {
   const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join(""); // convert bytes to hex string
 
   return hashHex;
+}
+
+// HTML page base
+/**
+ * Cloudflare worker gak support DOM API, tetapi mereka menggunakan HTML Rewriter.
+ * Tapi, karena kelihatannta repot kalo pake HTML Rewriter. Kita pake cara konfensional saja...
+ */
+let baseHTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proxy List</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div class="container py-5">
+    <h1 class="text-center mb-4">PLACEHOLDER_JUDUL</h1>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      PLACEHOLDER_INFO
+    </div>
+    <div class="list-group mb-4">
+      PLACEHOLDER_PROXY_GROUP
+    </div>
+
+    <!-- Pagination -->
+    <nav>
+      <ul class="pagination justify-content-center">
+        PLACEHOLDER_PAGE_BUTTON
+      </ul>
+    </nav>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    function copyToClipboardbyID(id) {
+      let copyText = document.getElementById(id);
+      navigator.clipboard.writeText(copyText.textContent);
+    
+      alert("Copied the clipboard: " + copyText.textContent);
+    }
+  </script>
+</body>
+</html>
+`;
+
+class Document {
+  constructor() {
+    this.html = baseHTML;
+  }
+
+  setTitle(title) {
+    this.html = this.html.replaceAll("PLACEHOLDER_JUDUL", title);
+  }
+
+  addInfo(text) {
+    text = `<span>${text}</span>`;
+    this.html = this.html.replaceAll("PLACEHOLDER_INFO", `${text}\nPLACEHOLDER_INFO`);
+  }
+
+  addProxyGroup(title, proxies) {
+    let proxyGroupElement = `<div class="list-group-item">`;
+    proxyGroupElement += `<h5 class="mb-2">${title}</h5>`;
+    for (let i = 0; i < proxies.length; i++) {
+      const id = `${title}-${i}`.replaceAll(" ", "_");
+      proxyGroupElement += `<pre onclick="copyToClipboardbyID('${id}')" id=${id} class="bg-dark text-white p-2 rounded">${proxies[i]}</pre>`;
+    }
+    proxyGroupElement += `</div>`;
+
+    this.html = this.html.replaceAll("PLACEHOLDER_PROXY_GROUP", `${proxyGroupElement}\nPLACEHOLDER_PROXY_GROUP`);
+  }
+
+  addPageButton(text, link, isDisabled, isActive) {
+    const pageButton = `<li class="page-item ${isDisabled ? "disabled" : ""} ${isActive ? "active" : ""}" ${
+      isActive ? 'aria-current="page"' : ""
+    }><a aria-disabled="${isDisabled}" class="page-link" href="${link}">${text}</a></li>`;
+
+    this.html = this.html.replaceAll("PLACEHOLDER_PAGE_BUTTON", `${pageButton}\nPLACEHOLDER_PAGE_BUTTON`);
+  }
+
+  build() {
+    return this.html.replaceAll(/PLACEHOLDER_\w+/gim, "");
+  }
 }
