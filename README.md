@@ -9,6 +9,7 @@ Sebuah repository serverless tunnel studi kasus Indonesia
 - [x] Cache daftar proxy
 - [x] Support TCP dan DoH
 - [x] Transport Websocket CDN dan SNI
+- [x] Pagination
 
 # Todo (Belum Selesai)
 
@@ -38,9 +39,9 @@ Kode ini masih perlu banyak perbaikan, jadi silahkan berkontribusi dan berikan P
 # Endpoint
 
 - `/` -> Halaman utama reverse proxy
-- `/sub` -> Halaman sub/list akun
+- `/sub/:page` -> Halaman sub/list akun
 
 # Footnote
 
-- Hal aneh dan anomali lain yang saya lakukan [FoolVPN](https://t.me/foolvpn)
-- Contact Person [Telegram](https://t.me/d_fordlalatina)
+- Hal aneh lain yang saya kerjakan [FoolVPN](https://t.me/foolvpn)
+- Tanya-tanya -> [Telegram](https://t.me/d_fordlalatina)

@@ -2,9 +2,11 @@ import { connect } from "cloudflare:sockets";
 
 // Variables
 let cachedProxyList = [];
+let hashCachedProxyList = "";
 let proxyIP = "";
 
 // Constant
+const PROXY_PER_PAGE = 10;
 const WS_READY_STATE_OPEN = 1;
 const WS_READY_STATE_CLOSING = 2;
 
@@ -24,7 +26,18 @@ async function getProxyList(env, forceReload = false) {
 
     const proxyBank = await fetch(proxyBankUrl);
     if (proxyBank.status == 200) {
-      const proxyString = ((await proxyBank.text()) || "").split("\n").filter(Boolean);
+      const text = (await proxyBank.text()) || "";
+
+      if (hashCachedProxyList) {
+        const newHashProxyList = await generateHashFromText(text);
+        if (newHashProxyList != hashCachedProxyList) {
+          hashCachedProxyList = newHashProxyList;
+        } else {
+          return cachedProxyList; // same text
+        }
+      }
+
+      const proxyString = text.split("\n").filter(Boolean);
       cachedProxyList = proxyString
         .map((entry) => {
           const [proxyIP, proxyPort, country, org] = entry.split(",");
@@ -58,20 +71,27 @@ async function reverseProxy(request, target) {
   return newResponse;
 }
 
-function getAllConfig(hostName, proxyList) {
+function getAllConfig(hostName, proxyList, page = 0) {
+  const startIndex = PROXY_PER_PAGE * page;
+
   try {
     const uuid = crypto.randomUUID();
     const ports = [443, 80];
     const protocols = ["trojan", "vless", "ss"];
 
-    let html = "";
+    let html = `Page ${page} of ${Math.floor(proxyList.length / 10)}</br>`;
+    html += `Total ProxyIP: ${proxyList.length}</br>`;
+    html += `Proxy per-Page: ${PROXY_PER_PAGE}</br>`;
 
     const uri = new URL(`trojan://${hostName}`);
     uri.searchParams.set("encryption", "none");
     uri.searchParams.set("type", "ws");
     uri.searchParams.set("host", hostName);
 
-    for (const proxy of proxyList) {
+    for (let i = startIndex; i < startIndex + PROXY_PER_PAGE; i++) {
+      const proxy = proxyList[i];
+      if (!proxy) break;
+
       const { proxyIP, proxyPort, country, org } = proxy;
 
       html += `<h3>${country} ${org}</h3>`;
@@ -124,14 +144,15 @@ export default {
         }
       }
 
-      switch (url.pathname) {
-        case "/sub":
-          const hostname = request.headers.get("Host");
-          const result = getAllConfig(hostname, await getProxyList(env, true));
-          return new Response(result, {
-            status: 200,
-            headers: { "Content-Type": "text/html;charset=utf-8" },
-          });
+      if (url.pathname.startsWith("/sub")) {
+        const page = url.pathname.match(/^\/sub\/(\d+)$/);
+        const pageIndex = parseInt(page ? page[1] : "0");
+        const hostname = request.headers.get("Host");
+        const result = getAllConfig(hostname, await getProxyList(env, true), pageIndex);
+        return new Response(result, {
+          status: 200,
+          headers: { "Content-Type": "text/html;charset=utf-8" },
+        });
       }
 
       const targetReverseProxy = env.REVERSE_PROXY_TARGET || "example.com";
@@ -257,7 +278,7 @@ async function protocolSniffer(buffer) {
 
   const vlessDelimiter = new Uint8Array(buffer.slice(1, 17));
   // Hanya mendukung UUID v4
-  if (arrayBufferToHex(vlessDelimiter).match(/^\w{8}\w{4}4\w{3}[89ab]\w{3}\w{12}$/)) {
+  if (arrayBufferToHex(vlessDelimiter).match(/^[0-9a-f]{8}[0-9a-f]{4}4[0-9a-f]{3}[89ab][0-9a-f]{3}[0-9a-f]{12}$/i)) {
     return "VLESS";
   }
 
@@ -304,6 +325,60 @@ async function handleTCPOutBound(
   const tcpSocket = await connectAndWrite(addressRemote, portRemote);
 
   remoteSocketToWS(tcpSocket, webSocket, responseHeader, retry, log);
+}
+
+async function handleUDPOutbound(webSocket, responseHeader, log) {
+  let isVlessHeaderSent = false;
+  const transformStream = new TransformStream({
+    start(controller) {},
+    transform(chunk, controller) {
+      for (let index = 0; index < chunk.byteLength; ) {
+        const lengthBuffer = chunk.slice(index, index + 2);
+        const udpPakcetLength = new DataView(lengthBuffer).getUint16(0);
+        const udpData = new Uint8Array(chunk.slice(index + 2, index + 2 + udpPakcetLength));
+        index = index + 2 + udpPakcetLength;
+        controller.enqueue(udpData);
+      }
+    },
+    flush(controller) {},
+  });
+  transformStream.readable
+    .pipeTo(
+      new WritableStream({
+        async write(chunk) {
+          const resp = await fetch("https://1.1.1.1/dns-query", {
+            method: "POST",
+            headers: {
+              "content-type": "application/dns-message",
+            },
+            body: chunk,
+          });
+          const dnsQueryResult = await resp.arrayBuffer();
+          const udpSize = dnsQueryResult.byteLength;
+          const udpSizeBuffer = new Uint8Array([(udpSize >> 8) & 0xff, udpSize & 0xff]);
+          if (webSocket.readyState === WS_READY_STATE_OPEN) {
+            log(`doh success and dns message length is ${udpSize}`);
+            if (isVlessHeaderSent) {
+              webSocket.send(await new Blob([udpSizeBuffer, dnsQueryResult]).arrayBuffer());
+            } else {
+              webSocket.send(await new Blob([responseHeader, udpSizeBuffer, dnsQueryResult]).arrayBuffer());
+              isVlessHeaderSent = true;
+            }
+          }
+        },
+      })
+    )
+    .catch((error) => {
+      log("dns udp has error" + error);
+    });
+
+  const writer = transformStream.writable.getWriter();
+
+  return {
+    write(chunk) {
+      writer.write(chunk);
+    },
+  };
 }
 
 function makeReadableWebSocketStream(webSocketServer, earlyDataHeader, log) {
@@ -592,6 +667,17 @@ async function remoteSocketToWS(remoteSocket, webSocket, responseHeader, retry, 
   }
 }
 
+function safeCloseWebSocket(socket) {
+  try {
+    if (socket.readyState === WS_READY_STATE_OPEN || socket.readyState === WS_READY_STATE_CLOSING) {
+      socket.close();
+    }
+  } catch (error) {
+    console.error("safeCloseWebSocket error", error);
+  }
+}
+
+// Helpers
 function base64ToArrayBuffer(base64Str) {
   if (!base64Str) {
     return { error: null };
@@ -610,66 +696,11 @@ function arrayBufferToHex(buffer) {
   return [...new Uint8Array(buffer)].map((x) => x.toString(16).padStart(2, "0")).join("");
 }
 
-async function handleUDPOutbound(webSocket, responseHeader, log) {
-  let isVlessHeaderSent = false;
-  const transformStream = new TransformStream({
-    start(controller) {},
-    transform(chunk, controller) {
-      for (let index = 0; index < chunk.byteLength; ) {
-        const lengthBuffer = chunk.slice(index, index + 2);
-        const udpPakcetLength = new DataView(lengthBuffer).getUint16(0);
-        const udpData = new Uint8Array(chunk.slice(index + 2, index + 2 + udpPakcetLength));
-        index = index + 2 + udpPakcetLength;
-        controller.enqueue(udpData);
-      }
-    },
-    flush(controller) {},
-  });
-  transformStream.readable
-    .pipeTo(
-      new WritableStream({
-        async write(chunk) {
-          const resp = await fetch("https://1.1.1.1/dns-query", {
-            method: "POST",
-            headers: {
-              "content-type": "application/dns-message",
-            },
-            body: chunk,
-          });
-          const dnsQueryResult = await resp.arrayBuffer();
-          const udpSize = dnsQueryResult.byteLength;
-          const udpSizeBuffer = new Uint8Array([(udpSize >> 8) & 0xff, udpSize & 0xff]);
-          if (webSocket.readyState === WS_READY_STATE_OPEN) {
-            log(`doh success and dns message length is ${udpSize}`);
-            if (isVlessHeaderSent) {
-              webSocket.send(await new Blob([udpSizeBuffer, dnsQueryResult]).arrayBuffer());
-            } else {
-              webSocket.send(await new Blob([responseHeader, udpSizeBuffer, dnsQueryResult]).arrayBuffer());
-              isVlessHeaderSent = true;
-            }
-          }
-        },
-      })
-    )
-    .catch((error) => {
-      log("dns udp has error" + error);
-    });
+async function generateHashFromText(text) {
+  const msgUint8 = new TextEncoder().encode(text); // encode as (utf-8) Uint8Array
+  const hashBuffer = await crypto.subtle.digest("MD5", msgUint8); // hash the message
+  const hashArray = Array.from(new Uint8Array(hashBuffer)); // convert buffer to byte array
+  const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join(""); // convert bytes to hex string
 
-  const writer = transformStream.writable.getWriter();
-
-  return {
-    write(chunk) {
-      writer.write(chunk);
-    },
-  };
-}
-
-function safeCloseWebSocket(socket) {
-  try {
-    if (socket.readyState === WS_READY_STATE_OPEN || socket.readyState === WS_READY_STATE_CLOSING) {
-      socket.close();
-    }
-  } catch (error) {
-    console.error("safeCloseWebSocket error", error);
-  }
+  return hashHex;
 }
