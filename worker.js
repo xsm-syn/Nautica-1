@@ -87,7 +87,7 @@ function getAllConfig(hostName, proxyList, page = 0) {
 
     // Build HTML
     const document = new Document();
-    document.setTitle("Welcome to Nautica");
+    document.setTitle("Welcome to <span class='text-blue-500'>Nautica</span>");
     document.addInfo(`Total: ${proxyList.length}`);
     document.addInfo(`Page: ${page}/${Math.floor(proxyList.length / PROXY_PER_PAGE)}`);
 
@@ -738,10 +738,6 @@ let baseHTML = `
     <title>Proxy List</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      body {
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%239C92AC' fill-opacity='0.4' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'%3E%3C/path%3E%3C/svg%3E");
-      }
-
       /* For Webkit-based browsers (Chrome, Safari and Opera) */
       .scrollbar-hide::-webkit-scrollbar {
           display: none;
@@ -754,14 +750,14 @@ let baseHTML = `
       }
     </style>
   </head>
-  <body class="bg-slate-900">
+  <body class="bg-neutral-50">
     <!-- Notification -->
     <div
       id="notification-badge"
-      class="fixed z-50 opacity-0 transition-opacity ease-in-out duration-300 backdrop-blur mt-9 mr-6 right-0 p-3 max-w-sm bg-slate-800/30 rounded-xl border border-slate-600 shadow-lg flex items-center gap-x-4"
+      class="fixed z-50 opacity-0 transition-opacity ease-in-out duration-300 mt-9 mr-6 right-0 p-3 max-w-sm bg-neutral-50 rounded-xl border border-2 border-neutral-700 flex items-center gap-x-4"
     >
       <div class="shrink-0">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#fafafa" class="size-6">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#171717" class="size-6">
           <path
             d="M5.85 3.5a.75.75 0 0 0-1.117-1 9.719 9.719 0 0 0-2.348 4.876.75.75 0 0 0 1.479.248A8.219 8.219 0 0 1 5.85 3.5ZM19.267 2.5a.75.75 0 1 0-1.118 1 8.22 8.22 0 0 1 1.987 4.124.75.75 0 0 0 1.48-.248A9.72 9.72 0 0 0 19.266 2.5Z"
           />
@@ -773,20 +769,27 @@ let baseHTML = `
         </svg>
       </div>
       <div>
-        <div class="text-xl font-medium text-slate-100">Berhasil!</div>
-        <p class="text-slate-300">Akun berhasil disalin</p>
+        <div class="text-md font-bold text-blue-500">Berhasil!</div>
+        <p class="text-sm text-neutral-700">Akun berhasil disalin</p>
+      </div>
+    </div>
+    <!-- Select Country -->
+    <div class="z-50">
+      <div
+        class="h-full fixed bottom-0 w-14 bg-neutral-50 border-r-2 border-neutral-700 fixed z-50 overflow-y-scroll scrollbar-hide"
+      >
+        <div class="text-2xl flex flex-col items-center h-full gap-2">
+          PLACEHOLDER_BENDERA_NEGARA
+        </div>
       </div>
     </div>
     <!-- Main -->
     <div class="container mx-auto py-10 mt-28">
       <div
         id="container-title"
-        class="fixed z-50 transition-colors duration-1000 backdrop-blur border-b border-slate-700 mx-auto pt-6 px-12 top-0 left-0 w-screen"
+        class="bg-neutral-50 border-b-2 border-neutral-700 fixed z-40 mx-auto pt-6 px-12 top-0 left-0 w-screen"
       >
-        <h1 class="text-3xl font-bold text-center mb-6 text-slate-100">PLACEHOLDER_JUDUL</h1>
-        <div class="flex justify-evenly items-center mb-6 text-slate-300">
-          PLACEHOLDER_INFO
-        </div>
+        <h1 class="text-xl text-center mb-6 text-stone-800">PLACEHOLDER_JUDUL</h1>
       </div>
       <div class="flex flex-col gap-6 items-center">
         PLACEHOLDER_PROXY_GROUP
@@ -798,10 +801,6 @@ let baseHTML = `
           PLACEHOLDER_PAGE_BUTTON
         </ul>
       </nav>
-
-      <footer class="text-center text-sm text-slate-400 left-0 right-0 mt-8">
-        <p>brought to you by d_fordlalatina</p>
-      </footer>
     </div>
     <script>
       function copyToClipboard(text) {
@@ -819,14 +818,7 @@ let baseHTML = `
       }
 
       window.onscroll = () => {
-        const titleContainer = document.getElementById("container-title");
         const paginationContainer = document.getElementById("container-pagination");
-        
-        if (document.body.scrollTop > 50 || document.documentElement.scrollTop > 50) {
-          titleContainer.classList.add("bg-black/20");
-        } else {
-          titleContainer.classList.remove("bg-black/20");
-        }
 
         if (window.innerHeight + Math.round(window.scrollY) >= document.body.offsetHeight) {
           paginationContainer.classList.remove("-translate-y-6");
@@ -863,17 +855,15 @@ class Document {
 
   buildProxyGroup() {
     let proxyGroupElement = "";
-    proxyGroupElement += `<div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">`;
+    proxyGroupElement += `<div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">`;
     for (let i = 0; i < this.proxies.length; i++) {
       const proxyData = this.proxies[i];
 
       // Assign proxies
-      proxyGroupElement += `<div class="rounded-lg shadow-md p-4 border border-slate-600 backdrop-blur w-60">`;
-      proxyGroupElement += `  <div id="countryFlag" class="-translate-y-8 -translate-x-8 text-4xl absolute">${getFlagEmoji(
-        proxyData.country
-      )}</div>`;
-      proxyGroupElement += `  <h5 class="font-semibold text-md text-slate-200 mb-1 overflow-x-scroll scrollbar-hide text-nowrap">${proxyData.org}</h5>`;
-      proxyGroupElement += `  <div class="text-slate-400 mb-2 border-b border-slate-700">`;
+      proxyGroupElement += `<div class="rounded-lg p-4 w-60 border border-2 border-neutral-600">`;
+      proxyGroupElement += `  <div id="countryFlag" class="-translate-y-10 -translate-x-9 absolute"><img src="https://flagsapi.com/${proxyData.country}/flat/48.png" /></div>`;
+      proxyGroupElement += `  <h5 class="font-bold text-md text-neutral-900 mb-1 overflow-x-scroll scrollbar-hide text-nowrap">${proxyData.org}</h5>`;
+      proxyGroupElement += `  <div class="text-neutral-600 mb-2">`;
       proxyGroupElement += `    <p>IP: ${proxyData.proxyIP}</p>`;
       proxyGroupElement += `    <p>Port: ${proxyData.proxyPort}</p>`;
       proxyGroupElement += `  </div>`;
@@ -886,7 +876,7 @@ class Document {
           proxyGroupElement += `<div class="flex gap-2 justify-around w-full">`;
         }
 
-        proxyGroupElement += `<button class="bg-slate-400 rounded p-1 w-full" onclick="copyToClipboard('${proxy}')">${indexName[x]}</button>`;
+        proxyGroupElement += `<button class="bg-blue-500 border border-2 border-neutral-700 rounded p-1 w-full text-white" onclick="copyToClipboard('${proxy}')">${indexName[x]}</button>`;
 
         if (x % 2 == 1) {
           proxyGroupElement += `</div>`;
@@ -900,16 +890,32 @@ class Document {
     this.html = this.html.replaceAll("PLACEHOLDER_PROXY_GROUP", `${proxyGroupElement}`);
   }
 
+  buildCountryFlag() {
+    const flagList = [];
+    for (const proxy of cachedProxyList) {
+      flagList.push(proxy.country);
+    }
+
+    let flagElement = "";
+    for (const flag of new Set(flagList)) {
+      flagElement += `<a><img src="https://flagsapi.com/${flag}/flat/24.png" /></a>`;
+    }
+
+    this.html = this.html.replaceAll("PLACEHOLDER_BENDERA_NEGARA", flagElement);
+  }
+
   addPageButton(text, link, isDisabled) {
     const pageButton = `<li><button ${
       isDisabled ? "disabled" : ""
-    } class="px-3 py-1 border border-slate-500 text-slate-200 backdrop-blur rounded" onclick=navigateTo('${link}')>${text}</button></li>`;
+    } class="px-3 py-1 bg-yellow-300 border border-2 border-neutral-600 rounded" onclick=navigateTo('${link}')>${text}</button></li>`;
 
     this.html = this.html.replaceAll("PLACEHOLDER_PAGE_BUTTON", `${pageButton}\nPLACEHOLDER_PAGE_BUTTON`);
   }
 
   build() {
     this.buildProxyGroup();
+    this.buildCountryFlag();
+
     return this.html.replaceAll(/PLACEHOLDER_\w+/gim, "");
   }
 }
