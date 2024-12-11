@@ -741,6 +741,17 @@ let baseHTML = `
       body {
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%239C92AC' fill-opacity='0.4' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'%3E%3C/path%3E%3C/svg%3E");
       }
+
+      /* For Webkit-based browsers (Chrome, Safari and Opera) */
+      .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+      }
+
+      /* For IE, Edge and Firefox */
+      .scrollbar-hide {
+          -ms-overflow-style: none;  /* IE and Edge */
+          scrollbar-width: none;  /* Firefox */
+      }
     </style>
   </head>
   <body class="bg-slate-900">
@@ -782,7 +793,7 @@ let baseHTML = `
       </div>
 
       <!-- Pagination -->
-      <nav class="mt-8">
+      <nav id="container-pagination" class="mt-8 sticky bottom-0 right-0 left-0 transition -translate-y-6">
         <ul class="flex justify-center space-x-4">
           PLACEHOLDER_PAGE_BUTTON
         </ul>
@@ -809,10 +820,18 @@ let baseHTML = `
 
       window.onscroll = () => {
         const titleContainer = document.getElementById("container-title");
+        const paginationContainer = document.getElementById("container-pagination");
+        
         if (document.body.scrollTop > 50 || document.documentElement.scrollTop > 50) {
           titleContainer.classList.add("bg-black/20");
         } else {
           titleContainer.classList.remove("bg-black/20");
+        }
+
+        if (window.innerHeight + Math.round(window.scrollY) >= document.body.offsetHeight) {
+          paginationContainer.classList.remove("-translate-y-6");
+        } else {
+          paginationContainer.classList.add("-translate-y-6");
         }
       };
     </script>
@@ -849,11 +868,11 @@ class Document {
       const proxyData = this.proxies[i];
 
       // Assign proxies
-      proxyGroupElement += `<div class="rounded-lg shadow-md p-4 border border-slate-600 backdrop-blur">`;
+      proxyGroupElement += `<div class="rounded-lg shadow-md p-4 border border-slate-600 backdrop-blur w-60">`;
       proxyGroupElement += `  <div id="countryFlag" class="-translate-y-8 -translate-x-8 text-4xl absolute">${getFlagEmoji(
         proxyData.country
       )}</div>`;
-      proxyGroupElement += `  <h5 class="font-semibold text-md text-slate-200 mb-1">${proxyData.org}</h5>`;
+      proxyGroupElement += `  <h5 class="font-semibold text-md text-slate-200 mb-1 overflow-x-scroll scrollbar-hide text-nowrap">${proxyData.org}</h5>`;
       proxyGroupElement += `  <div class="text-slate-400 mb-2 border-b border-slate-700">`;
       proxyGroupElement += `    <p>IP: ${proxyData.proxyIP}</p>`;
       proxyGroupElement += `    <p>Port: ${proxyData.proxyPort}</p>`;
