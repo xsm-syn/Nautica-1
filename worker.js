@@ -100,8 +100,8 @@ function getAllConfig(hostName, proxyList, page = 0) {
       uri.searchParams.set("path", `/${proxyIP}-${proxyPort}`);
       uri.hash = `${country} ${org}`;
 
+      const proxies = [];
       for (const port of ports) {
-        const proxies = [];
         uri.port = port.toString();
         for (const protocol of protocols) {
           // Special exceptions
@@ -118,14 +118,21 @@ function getAllConfig(hostName, proxyList, page = 0) {
           // Build VPN URI
           proxies.push(uri.toString());
         }
-        document.addProxyGroup(`${country} ${org} : ${port}`, proxies);
       }
+      document.registerProxies(
+        {
+          proxyIP,
+          proxyPort,
+          country,
+          org,
+        },
+        proxies
+      );
     }
 
     // Build pagination
-    document.addPageButton("Prev", `/sub/${page > 0 ? page - 1 : 0}`, page > 0 ? false : true, false);
-    document.addPageButton(page, "#", false, true);
-    document.addPageButton("Next", `/sub/${page + 1}`, page < Math.floor(proxyList.length / 10) ? false : true, false);
+    document.addPageButton("Prev", `/sub/${page > 0 ? page - 1 : 0}`, page > 0 ? false : true);
+    document.addPageButton("Next", `/sub/${page + 1}`, page < Math.floor(proxyList.length / 10) ? false : true);
 
     return document.build();
   } catch (error) {
@@ -709,6 +716,14 @@ async function generateHashFromText(text) {
   return hashHex;
 }
 
+function getFlagEmoji(isoCode) {
+  const codePoints = isoCode
+    .toUpperCase()
+    .split("")
+    .map((char) => 127397 + char.charCodeAt(0));
+  return String.fromCodePoint(...codePoints);
+}
+
 // HTML page base
 /**
  * Cloudflare worker gak support DOM API, tetapi mereka menggunakan HTML Rewriter.
@@ -716,44 +731,97 @@ async function generateHashFromText(text) {
  */
 let baseHTML = `
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Proxy List</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-  <div class="container py-5">
-    <h1 class="text-center mb-4">PLACEHOLDER_JUDUL</h1>
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      PLACEHOLDER_INFO
+<html lang="en" class="scroll-auto">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Proxy List</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%239C92AC' fill-opacity='0.4' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'%3E%3C/path%3E%3C/svg%3E");
+      }
+    </style>
+  </head>
+  <body class="bg-slate-900">
+    <!-- Notification -->
+    <div
+      id="notification-badge"
+      class="fixed z-50 opacity-0 transition-opacity ease-in-out duration-300 backdrop-blur mt-9 mr-6 right-0 p-3 max-w-sm bg-slate-800/30 rounded-xl border border-slate-600 shadow-lg flex items-center gap-x-4"
+    >
+      <div class="shrink-0">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#fafafa" class="size-6">
+          <path
+            d="M5.85 3.5a.75.75 0 0 0-1.117-1 9.719 9.719 0 0 0-2.348 4.876.75.75 0 0 0 1.479.248A8.219 8.219 0 0 1 5.85 3.5ZM19.267 2.5a.75.75 0 1 0-1.118 1 8.22 8.22 0 0 1 1.987 4.124.75.75 0 0 0 1.48-.248A9.72 9.72 0 0 0 19.266 2.5Z"
+          />
+          <path
+            fill-rule="evenodd"
+            d="M12 2.25A6.75 6.75 0 0 0 5.25 9v.75a8.217 8.217 0 0 1-2.119 5.52.75.75 0 0 0 .298 1.206c1.544.57 3.16.99 4.831 1.243a3.75 3.75 0 1 0 7.48 0 24.583 24.583 0 0 0 4.83-1.244.75.75 0 0 0 .298-1.205 8.217 8.217 0 0 1-2.118-5.52V9A6.75 6.75 0 0 0 12 2.25ZM9.75 18c0-.034 0-.067.002-.1a25.05 25.05 0 0 0 4.496 0l.002.1a2.25 2.25 0 1 1-4.5 0Z"
+            clip-rule="evenodd"
+          />
+        </svg>
+      </div>
+      <div>
+        <div class="text-xl font-medium text-slate-100">Berhasil!</div>
+        <p class="text-slate-300">Akun berhasil disalin</p>
+      </div>
     </div>
-    <div class="list-group mb-4">
-      PLACEHOLDER_PROXY_GROUP
-    </div>
+    <!-- Main -->
+    <div class="container mx-auto py-10 mt-28">
+      <div
+        id="container-title"
+        class="fixed z-50 transition-colors duration-1000 backdrop-blur border-b border-slate-700 mx-auto pt-6 px-12 top-0 left-0 w-screen"
+      >
+        <h1 class="text-3xl font-bold text-center mb-6 text-slate-100">PLACEHOLDER_JUDUL</h1>
+        <div class="flex justify-evenly items-center mb-6 text-slate-300">
+          PLACEHOLDER_INFO
+        </div>
+      </div>
+      <div class="flex flex-col gap-6 items-center">
+        PLACEHOLDER_PROXY_GROUP
+      </div>
 
-    <!-- Pagination -->
-    <nav>
-      <ul class="pagination justify-content-center">
-        PLACEHOLDER_PAGE_BUTTON
-      </ul>
-    </nav>
-  </div>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
-    function copyToClipboardbyID(id) {
-      let copyText = document.getElementById(id);
-      navigator.clipboard.writeText(copyText.textContent);
-    
-      alert("Copied the clipboard: " + copyText.textContent);
-    }
-  </script>
-</body>
+      <!-- Pagination -->
+      <nav class="mt-8">
+        <ul class="flex justify-center space-x-4">
+          PLACEHOLDER_PAGE_BUTTON
+        </ul>
+      </nav>
+
+      <footer class="text-center text-sm text-slate-400 left-0 right-0 mt-8">
+        <p>brought to you by d_fordlalatina</p>
+      </footer>
+    </div>
+    <script>
+      function copyToClipboard(text) {
+        const notification = document.getElementById("notification-badge");
+        navigator.clipboard.writeText(text);
+
+        notification.classList.remove("opacity-0");
+        setTimeout(() => {
+          notification.classList.add("opacity-0");
+        }, 2000);
+      }
+
+      function navigateTo(link) {
+        window.location.href = link;
+      }
+
+      window.onscroll = () => {
+        const titleContainer = document.getElementById("container-title");
+        if (document.body.scrollTop > 50 || document.documentElement.scrollTop > 50) {
+          titleContainer.classList.add("bg-black/20");
+        } else {
+          titleContainer.classList.remove("bg-black/20");
+        }
+      };
+    </script>
+  </body>
 </html>
 `;
 
 class Document {
+  proxies = [];
   constructor() {
     this.html = baseHTML;
   }
@@ -767,27 +835,62 @@ class Document {
     this.html = this.html.replaceAll("PLACEHOLDER_INFO", `${text}\nPLACEHOLDER_INFO`);
   }
 
-  addProxyGroup(title, proxies) {
-    let proxyGroupElement = `<div class="list-group-item">`;
-    proxyGroupElement += `<h5 class="mb-2">${title}</h5>`;
-    for (let i = 0; i < proxies.length; i++) {
-      const id = `${title}-${i}`.replaceAll(" ", "_");
-      proxyGroupElement += `<pre onclick="copyToClipboardbyID('${id}')" id=${id} class="bg-dark text-white p-2 rounded">${proxies[i]}</pre>`;
+  registerProxies(data, proxies) {
+    this.proxies.push({
+      ...data,
+      list: proxies,
+    });
+  }
+
+  buildProxyGroup() {
+    let proxyGroupElement = "";
+    proxyGroupElement += `<div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">`;
+    for (let i = 0; i < this.proxies.length; i++) {
+      const proxyData = this.proxies[i];
+
+      // Assign proxies
+      proxyGroupElement += `<div class="rounded-lg shadow-md p-4 border border-slate-600 backdrop-blur">`;
+      proxyGroupElement += `  <div id="countryFlag" class="-translate-y-8 -translate-x-8 text-4xl absolute">${getFlagEmoji(
+        proxyData.country
+      )}</div>`;
+      proxyGroupElement += `  <h5 class="font-semibold text-md text-slate-200 mb-1">${proxyData.org}</h5>`;
+      proxyGroupElement += `  <div class="text-slate-400 mb-2 border-b border-slate-700">`;
+      proxyGroupElement += `    <p>IP: ${proxyData.proxyIP}</p>`;
+      proxyGroupElement += `    <p>Port: ${proxyData.proxyPort}</p>`;
+      proxyGroupElement += `  </div>`;
+      proxyGroupElement += `  <div class="flex flex-col gap-2 mt-3 text-sm">`;
+      for (let x = 0; x < proxyData.list.length; x++) {
+        const indexName = ["Trojan TLS", "VLESS TLS", "SS TLS", "Trojan NTLS", "VLESS NTLS", "SS NTLS"];
+        const proxy = proxyData.list[x];
+
+        if (x % 2 == 0) {
+          proxyGroupElement += `<div class="flex gap-2 justify-around w-full">`;
+        }
+
+        proxyGroupElement += `<button class="bg-slate-400 rounded p-1 w-full" onclick="copyToClipboard('${proxy}')">${indexName[x]}</button>`;
+
+        if (x % 2 == 1) {
+          proxyGroupElement += `</div>`;
+        }
+      }
+      proxyGroupElement += `  </div>`;
+      proxyGroupElement += `</div>`;
     }
     proxyGroupElement += `</div>`;
 
-    this.html = this.html.replaceAll("PLACEHOLDER_PROXY_GROUP", `${proxyGroupElement}\nPLACEHOLDER_PROXY_GROUP`);
+    this.html = this.html.replaceAll("PLACEHOLDER_PROXY_GROUP", `${proxyGroupElement}`);
   }
 
-  addPageButton(text, link, isDisabled, isActive) {
-    const pageButton = `<li class="page-item ${isDisabled ? "disabled" : ""} ${isActive ? "active" : ""}" ${
-      isActive ? 'aria-current="page"' : ""
-    }><a aria-disabled="${isDisabled}" class="page-link" href="${link}">${text}</a></li>`;
+  addPageButton(text, link, isDisabled) {
+    const pageButton = `<li><button ${
+      isDisabled ? "disabled" : ""
+    } class="px-3 py-1 border border-slate-500 text-slate-200 backdrop-blur rounded" onclick=navigateTo('${link}')>${text}</button></li>`;
 
     this.html = this.html.replaceAll("PLACEHOLDER_PAGE_BUTTON", `${pageButton}\nPLACEHOLDER_PAGE_BUTTON`);
   }
 
   build() {
+    this.buildProxyGroup();
     return this.html.replaceAll(/PLACEHOLDER_\w+/gim, "");
   }
 }
