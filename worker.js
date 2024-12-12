@@ -6,7 +6,7 @@ let cachedProxyList = [];
 
 // Constant
 const PROXY_HEALTH_CHECK_API = "https://p01--boiling-frame--kw6dd7bjv2nr.code.run/check";
-const PROXY_PER_PAGE = 10;
+const PROXY_PER_PAGE = 50;
 const WS_READY_STATE_OPEN = 1;
 const WS_READY_STATE_CLOSING = 2;
 const CORS_HEADER_OPTIONS = {
@@ -842,7 +842,7 @@ let baseHTML = `
           const pingElement = document.getElementById("ping-"+i);
           if (pingElement == undefined) return;
 
-          const target = pingElement.textContent.split(" ").filter((ipPort) => ipPort.match(":"));
+          const target = pingElement.textContent.split(" ").filter((ipPort) => ipPort.match(":"))[0];
           let isActive = false;
           new Promise(async (resolve) => {
             for (const tls of [true, false]) {
@@ -919,7 +919,7 @@ class Document {
 
       // Assign proxies
       proxyGroupElement += `<div class="rounded-lg p-4 w-60 border border-2 border-neutral-600">`;
-      proxyGroupElement += `  <div id="countryFlag" class="-translate-y-10 -translate-x-9 absolute"><img src="https://flagsapi.com/${proxyData.country}/flat/48.png" /></div>`;
+      proxyGroupElement += `  <div id="countryFlag" class="absolute -translate-y-8 border-2 border-neutral-600 rounded-md overflow-hidden"><img width="40" src="https://flagcdn.com/w160/${proxyData.country.toLowerCase()}.png" /></div>`;
       proxyGroupElement += `  <div>`;
       proxyGroupElement += `    <div id="ping-${i}" class="animate-pulse text-xs">Checking ${proxyData.proxyIP}:${proxyData.proxyPort} ...</div>`;
       proxyGroupElement += `  </div>`;
@@ -959,7 +959,7 @@ class Document {
 
     let flagElement = "";
     for (const flag of new Set(flagList)) {
-      flagElement += `<a><img src="https://flagsapi.com/${flag}/flat/24.png" /></a>`;
+      flagElement += `<a class="py-1" ><img width=20 src="https://flagcdn.com/w80/${flag.toLowerCase()}.png" /></a>`;
     }
 
     this.html = this.html.replaceAll("PLACEHOLDER_BENDERA_NEGARA", flagElement);

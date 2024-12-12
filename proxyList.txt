@@ -1,6 +1,7 @@
 35.219.15.90,443,ID,Google LLC
 35.219.50.99,443,ID,Google LLC
 103.168.146.169,20132,ID,Pt Herza Digital Indonesia
+103.168.146.160,20132,ID,Tes Inactive Server
 172.232.239.134,587,ID,Akamai Technologies  Inc
 172.232.239.175,587,ID,Akamai Technologies  Inc
 103.133.223.52,2096,ID,Pt Cloud Teknologi Nusantara
@@ -10,6 +11,8 @@
 103.133.223.51,2096,ID,Pt Cloud Teknologi Nusantara
 103.186.1.209,2053,ID,Pt Cloud Hosting Indonesia
 103.6.207.108,8080,ID,Pt Pusat Media Indonesia
+103.168.46.169,20132,ID,Tes Inactive Server
+103.168.14.169,20132,ID,Tes Inactive Server
 172.232.239.147,587,ID,Akamai Technologies  Inc
 43.133.145.156,53136,ID,Shenzhen Tencent Computer Systems Company Limited
 51.79.158.126,443,SG,OVH SAS
@@ -19,6 +22,7 @@
 45.77.171.102,3128,SG,The Constant Company  LLC
 138.2.89.238,43254,SG,Oracle Corporation
 47.74.254.191,8900,SG,Alibaba us Technology Co   Ltd
+103.18.146.169,20132,ID,Tes Inactive Server
 43.156.16.213,31528,SG,Shenzhen Tencent Computer Systems Company Limited
 129.150.58.86,57621,SG,Oracle Corporation
 103.180.161.10,587,SG,Hong Kong Megalayer Technology Co  limited
