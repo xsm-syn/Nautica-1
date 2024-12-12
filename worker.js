@@ -784,6 +784,7 @@ let baseHTML = `
           scrollbar-width: none;  /* Firefox */
       }
     </style>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lozad/dist/lozad.min.js"></script>
   </head>
   <body class="bg-neutral-50">
     <!-- Notification -->
@@ -858,6 +859,12 @@ let baseHTML = `
           if (pingElement == undefined) return;
 
           const target = pingElement.textContent.split(" ").filter((ipPort) => ipPort.match(":"))[0];
+          if (target) {
+            pingElement.textContent = "Checking...";
+          } else {
+            continue;
+          }
+
           let isActive = false;
           new Promise(async (resolve) => {
             for (const tls of [true, false]) {
@@ -887,7 +894,13 @@ let baseHTML = `
       }
 
       window.onload = () => {
-        checkProxy();
+        const observer = lozad(".lozad", {
+          load: function (el) {
+            el.classList.remove("scale-0");
+            checkProxy();
+          },
+        });
+        observer.observe();
       };
 
       window.onscroll = () => {
@@ -933,10 +946,10 @@ class Document {
       const proxyData = this.proxies[i];
 
       // Assign proxies
-      proxyGroupElement += `<div class="rounded-lg p-4 w-60 border border-2 border-neutral-600">`;
+      proxyGroupElement += `<div class="lozad scale-0 transition-transform duration-200 rounded-lg p-4 w-60 border border-2 border-neutral-600">`;
       proxyGroupElement += `  <div id="countryFlag" class="absolute -translate-y-8 border-2 border-neutral-600 rounded-md overflow-hidden"><img width="40" src="https://flagcdn.com/w160/${proxyData.country.toLowerCase()}.png" /></div>`;
       proxyGroupElement += `  <div>`;
-      proxyGroupElement += `    <div id="ping-${i}" class="animate-pulse text-xs">Checking ${proxyData.proxyIP}:${proxyData.proxyPort} ...</div>`;
+      proxyGroupElement += `    <div id="ping-${i}" class="animate-pulse text-xs">Idle ${proxyData.proxyIP}:${proxyData.proxyPort}</div>`;
       proxyGroupElement += `  </div>`;
       proxyGroupElement += `  <h5 class="font-bold text-md text-neutral-900 mb-1 overflow-x-scroll scrollbar-hide text-nowrap">${proxyData.org}</h5>`;
       proxyGroupElement += `  <div class="text-neutral-600 mb-2">`;
