@@ -6,7 +6,7 @@ let cachedProxyList = [];
 
 // Constant
 const PROXY_HEALTH_CHECK_API = "https://p01--boiling-frame--kw6dd7bjv2nr.code.run/check";
-const PROXY_PER_PAGE = 50;
+const PROXY_PER_PAGE = 24;
 const WS_READY_STATE_OPEN = 1;
 const WS_READY_STATE_CLOSING = 2;
 const CORS_HEADER_OPTIONS = {
@@ -159,7 +159,19 @@ export default {
         const page = url.pathname.match(/^\/sub\/(\d+)$/);
         const pageIndex = parseInt(page ? page[1] : "0");
         const hostname = request.headers.get("Host");
-        const result = getAllConfig(hostname, await getProxyList(env), pageIndex);
+
+        // Queries
+        const countrySelect = url.searchParams.get("cc")?.split(",");
+        let proxyList = (await getProxyList(env)).filter((proxy) => {
+          // Filter proxies by Country
+          if (countrySelect) {
+            return countrySelect.includes(proxy.country);
+          }
+
+          return true;
+        });
+
+        const result = getAllConfig(hostname, proxyList, pageIndex);
         return new Response(result, {
           status: 200,
           headers: { "Content-Type": "text/html;charset=utf-8" },
@@ -183,6 +195,9 @@ export default {
     } catch (err) {
       return new Response(`An error occurred: ${err.toString()}`, {
         status: 500,
+        headers: {
+          ...CORS_HEADER_OPTIONS,
+        },
       });
     }
   },
@@ -834,7 +849,7 @@ let baseHTML = `
       }
 
       function navigateTo(link) {
-        window.location.href = link;
+        window.location.href = link + window.location.search;
       }
 
       function checkProxy() {
@@ -959,7 +974,7 @@ class Document {
 
     let flagElement = "";
     for (const flag of new Set(flagList)) {
-      flagElement += `<a class="py-1" ><img width=20 src="https://flagcdn.com/w80/${flag.toLowerCase()}.png" /></a>`;
+      flagElement += `<a href="/sub?cc=${flag}" class="py-1" ><img width=20 src="https://flagcdn.com/w80/${flag.toLowerCase()}.png" /></a>`;
     }
 
     this.html = this.html.replaceAll("PLACEHOLDER_BENDERA_NEGARA", flagElement);
