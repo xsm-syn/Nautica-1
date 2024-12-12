@@ -1,16 +1,21 @@
 import { connect } from "cloudflare:sockets";
 
 // Variables
-let cachedProxyList = [];
-let hashCachedProxyList = "";
 let proxyIP = "";
+let cachedProxyList = [];
 
 // Constant
+const PROXY_HEALTH_CHECK_API = "https://p01--boiling-frame--kw6dd7bjv2nr.code.run/check";
 const PROXY_PER_PAGE = 10;
 const WS_READY_STATE_OPEN = 1;
 const WS_READY_STATE_CLOSING = 2;
+const CORS_HEADER_OPTIONS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET,HEAD,POST,OPTIONS",
+  "Access-Control-Max-Age": "86400",
+};
 
-async function getProxyList(env, forceReload = false) {
+async function getProxyList(env) {
   /**
    * Format:
    *
@@ -18,38 +23,27 @@ async function getProxyList(env, forceReload = false) {
    * Contoh:
    * 1.1.1.1,443,SG,Cloudflare Inc.
    */
-  if (!cachedProxyList.length || forceReload) {
-    const proxyBankUrl = env.PROXY_BANK_URL || "";
-    if (!proxyBankUrl) {
-      throw new Error("No Proxy Bank URL Provided!");
-    }
+  const proxyBankUrl = env.PROXY_BANK_URL || "";
+  if (!proxyBankUrl) {
+    throw new Error("No Proxy Bank URL Provided!");
+  }
 
-    const proxyBank = await fetch(proxyBankUrl);
-    if (proxyBank.status == 200) {
-      const text = (await proxyBank.text()) || "";
+  const proxyBank = await fetch(proxyBankUrl);
+  if (proxyBank.status == 200) {
+    const text = (await proxyBank.text()) || "";
 
-      if (hashCachedProxyList) {
-        const newHashProxyList = await generateHashFromText(text);
-        if (newHashProxyList != hashCachedProxyList) {
-          hashCachedProxyList = newHashProxyList;
-        } else {
-          return cachedProxyList; // same text
-        }
-      }
-
-      const proxyString = text.split("\n").filter(Boolean);
-      cachedProxyList = proxyString
-        .map((entry) => {
-          const [proxyIP, proxyPort, country, org] = entry.split(",");
-          return {
-            proxyIP: proxyIP || "Unknown",
-            proxyPort: proxyPort || "Unknown",
-            country: country || "Unknown",
-            org: org || "Unknown Org",
-          };
-        })
-        .filter(Boolean);
-    }
+    const proxyString = text.split("\n").filter(Boolean);
+    cachedProxyList = proxyString
+      .map((entry) => {
+        const [proxyIP, proxyPort, country, org] = entry.split(",");
+        return {
+          proxyIP: proxyIP || "Unknown",
+          proxyPort: proxyPort || "Unknown",
+          country: country || "Unknown",
+          org: org || "Unknown Org",
+        };
+      })
+      .filter(Boolean);
   }
 
   return cachedProxyList;
@@ -57,7 +51,10 @@ async function getProxyList(env, forceReload = false) {
 
 async function reverseProxy(request, target) {
   const targetUrl = new URL(request.url);
-  targetUrl.hostname = target;
+  const targetChunk = target.split(":");
+
+  targetUrl.hostname = targetChunk[0];
+  targetUrl.port = targetChunk.toString() || "443";
 
   const modifiedRequest = new Request(targetUrl, request);
 
@@ -66,6 +63,9 @@ async function reverseProxy(request, target) {
   const response = await fetch(modifiedRequest);
 
   const newResponse = new Response(response.body, response);
+  for (const [key, value] of Object.entries(CORS_HEADER_OPTIONS)) {
+    newResponse.headers.set(key, value);
+  }
   newResponse.headers.set("X-Proxied-By", "Cloudflare Worker");
 
   return newResponse;
@@ -159,10 +159,22 @@ export default {
         const page = url.pathname.match(/^\/sub\/(\d+)$/);
         const pageIndex = parseInt(page ? page[1] : "0");
         const hostname = request.headers.get("Host");
-        const result = getAllConfig(hostname, await getProxyList(env, true), pageIndex);
+        const result = getAllConfig(hostname, await getProxyList(env), pageIndex);
         return new Response(result, {
           status: 200,
           headers: { "Content-Type": "text/html;charset=utf-8" },
+        });
+      } else if (url.pathname.startsWith("/check")) {
+        const target = url.searchParams.get("target").split(":");
+        const tls = url.searchParams.get("tls");
+        const result = await checkProxyHealth(target[0], target[1] || "443", tls);
+
+        return new Response(JSON.stringify(result), {
+          status: 200,
+          headers: {
+            ...CORS_HEADER_OPTIONS,
+            "Content-Type": "application/json",
+          },
         });
       }
 
@@ -315,6 +327,7 @@ async function handleTCPOutBound(
     const writer = tcpSocket.writable.getWriter();
     await writer.write(rawClientData);
     writer.releaseLock();
+
     return tcpSocket;
   }
 
@@ -688,6 +701,13 @@ function safeCloseWebSocket(socket) {
   }
 }
 
+async function checkProxyHealth(proxyIP, proxyPort, tls) {
+  const req = await fetch(
+    `${PROXY_HEALTH_CHECK_API}?ip=${proxyIP}&port=${proxyPort}&host=speed.cloudflare.com&tls=${tls}`
+  );
+  return await req.json();
+}
+
 // Helpers
 function base64ToArrayBuffer(base64Str) {
   if (!base64Str) {
@@ -776,7 +796,7 @@ let baseHTML = `
     <!-- Select Country -->
     <div class="z-50">
       <div
-        class="h-full fixed bottom-0 w-14 bg-neutral-50 border-r-2 border-neutral-700 fixed z-50 overflow-y-scroll scrollbar-hide"
+        class="h-full fixed top-0 w-14 bg-neutral-50 border-r-2 border-neutral-700 z-50 overflow-y-scroll scrollbar-hide"
       >
         <div class="text-2xl flex flex-col items-center h-full gap-2">
           PLACEHOLDER_BENDERA_NEGARA
@@ -816,6 +836,44 @@ let baseHTML = `
       function navigateTo(link) {
         window.location.href = link;
       }
+
+      function checkProxy() {
+        for (let i = 0; ; i++) {
+          const pingElement = document.getElementById("ping-"+i);
+          if (pingElement == undefined) return;
+
+          const target = pingElement.textContent.split(" ").filter((ipPort) => ipPort.match(":"));
+          let isActive = false;
+          new Promise(async (resolve) => {
+            for (const tls of [true, false]) {
+              const res = await fetch("https://nautica.foolvpn.me/check?target=" + target + "&tls=" + tls)
+                .then(async (res) => {
+                  if (isActive) return;
+                  if (res.status == 200) {
+                    const jsonResp = await res.json();
+                    if (jsonResp.proxyip) {
+                      isActive = true;
+                      pingElement.textContent = "Active";
+                      pingElement.classList.add("text-green-600");
+                    } else {
+                      pingElement.textContent = "Inactive";
+                      pingElement.classList.add("text-red-600");
+                    }
+                  } else {
+                    pingElement.textContent = "Check Failed!";
+                  }
+                })
+                .finally(() => {
+                  resolve(0);
+                });
+            }
+          });
+        }
+      }
+
+      window.onload = () => {
+        checkProxy();
+      };
 
       window.onscroll = () => {
         const paginationContainer = document.getElementById("container-pagination");
@@ -862,6 +920,9 @@ class Document {
       // Assign proxies
       proxyGroupElement += `<div class="rounded-lg p-4 w-60 border border-2 border-neutral-600">`;
       proxyGroupElement += `  <div id="countryFlag" class="-translate-y-10 -translate-x-9 absolute"><img src="https://flagsapi.com/${proxyData.country}/flat/48.png" /></div>`;
+      proxyGroupElement += `  <div>`;
+      proxyGroupElement += `    <div id="ping-${i}" class="animate-pulse text-xs">Checking ${proxyData.proxyIP}:${proxyData.proxyPort} ...</div>`;
+      proxyGroupElement += `  </div>`;
       proxyGroupElement += `  <h5 class="font-bold text-md text-neutral-900 mb-1 overflow-x-scroll scrollbar-hide text-nowrap">${proxyData.org}</h5>`;
       proxyGroupElement += `  <div class="text-neutral-600 mb-2">`;
       proxyGroupElement += `    <p>IP: ${proxyData.proxyIP}</p>`;
