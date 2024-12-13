@@ -87,7 +87,7 @@ function getAllConfig(hostName, proxyList, page = 0) {
 
     // Build HTML
     const document = new Document();
-    document.setTitle("Welcome to <span class='text-blue-500'>Nautica</span>");
+    document.setTitle("Welcome to <span class='text-blue-500 font-semibold'>Nautica</span>");
     document.addInfo(`Total: ${proxyList.length}`);
     document.addInfo(`Page: ${page}/${Math.floor(proxyList.length / PROXY_PER_PAGE)}`);
 
@@ -766,16 +766,16 @@ function getFlagEmoji(isoCode) {
  */
 let baseHTML = `
 <!DOCTYPE html>
-<html lang="en" class="scroll-auto">
+<html lang="en" id="html" class="scroll-auto">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Proxy List</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      body {
-        background-image: url("https://storage.googleapis.com/gweb-uniblog-publish-prod/original_images/IO_2021_heroes_1.jpg")
-      }
+      // body {
+      //   background-image: url("https://storage.googleapis.com/gweb-uniblog-publish-prod/original_images/IO_2021_heroes_1.jpg")
+      // }
 
       /* For Webkit-based browsers (Chrome, Safari and Opera) */
       .scrollbar-hide::-webkit-scrollbar {
@@ -789,12 +789,17 @@ let baseHTML = `
       }
     </style>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lozad/dist/lozad.min.js"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'selector',
+      }
+    </script>
   </head>
-  <body class="bg-white bg-fixed">
+  <body class="bg-white dark:bg-neutral-800 bg-fixed">
     <!-- Notification -->
     <div
       id="notification-badge"
-      class="fixed z-50 opacity-0 transition-opacity ease-in-out duration-300 mt-9 mr-6 right-0 p-3 max-w-sm bg-white rounded-xl border border-2 border-neutral-700 flex items-center gap-x-4"
+      class="fixed z-50 opacity-0 transition-opacity ease-in-out duration-300 mt-9 mr-6 right-0 p-3 max-w-sm bg-white rounded-xl border border-2 border-neutral-800 flex items-center gap-x-4"
     >
       <div class="shrink-0">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#171717" class="size-6">
@@ -810,13 +815,13 @@ let baseHTML = `
       </div>
       <div>
         <div class="text-md font-bold text-blue-500">Berhasil!</div>
-        <p class="text-sm text-neutral-700">Akun berhasil disalin</p>
+        <p class="text-sm text-neutral-800">Akun berhasil disalin</p>
       </div>
     </div>
     <!-- Select Country -->
     <div class="z-50">
       <div
-        class="h-full fixed top-0 w-14 bg-white border-r-2 border-neutral-700 z-50 overflow-y-scroll scrollbar-hide"
+        class="h-full fixed top-0 w-14 bg-white dark:bg-neutral-800 border-r-2 border-neutral-800 dark:border-white z-50 overflow-y-scroll scrollbar-hide"
       >
         <div class="text-2xl flex flex-col items-center h-full gap-2">
           PLACEHOLDER_BENDERA_NEGARA
@@ -827,9 +832,9 @@ let baseHTML = `
     <div class="container mx-auto py-10 mt-28">
       <div
         id="container-title"
-        class="bg-white border-b-2 border-neutral-700 fixed z-40 mx-auto pt-6 px-12 top-0 left-0 w-screen"
+        class="bg-white dark:bg-neutral-800 border-b-2 border-neutral-800 dark:border-white fixed z-40 mx-auto pt-6 px-12 top-0 left-0 w-screen"
       >
-        <h1 class="text-xl text-center mb-6 text-stone-800">PLACEHOLDER_JUDUL</h1>
+        <h1 class="text-xl text-center mb-6 text-neutral-800 dark:text-white">PLACEHOLDER_JUDUL</h1>
       </div>
       <div class="flex flex-col gap-6 items-center">
         PLACEHOLDER_PROXY_GROUP
@@ -842,6 +847,15 @@ let baseHTML = `
         </ul>
       </nav>
     </div>
+    <footer>
+      <div>
+        <button onclick="toggleDarkMode()" class="fixed bg-amber-400 rounded-full z-50 right-3 bottom-3 border-2 border-neutral-800 p-1">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
+          </svg>
+        </button>
+      </div>
+    </footer>
     <script>
       function copyToClipboard(text) {
         const notification = document.getElementById("notification-badge");
@@ -855,6 +869,15 @@ let baseHTML = `
 
       function navigateTo(link) {
         window.location.href = link + window.location.search;
+      }
+
+      function toggleDarkMode() {
+        const rootElement = document.getElementById("html");
+        if (rootElement.classList.contains("dark")) {
+          rootElement.classList.remove("dark");
+        } else {
+          rootElement.classList.add("dark");
+        }
       }
 
       function checkProxy() {
@@ -876,6 +899,7 @@ let baseHTML = `
                 .then(async (res) => {
                   if (isActive) return;
                   if (res.status == 200) {
+                    pingElement.classList.remove("dark:text-white");
                     const jsonResp = await res.json();
                     if (jsonResp.proxyip) {
                       isActive = true;
@@ -951,15 +975,17 @@ class Document {
       const proxyData = this.proxies[i];
 
       // Assign proxies
-      proxyGroupElement += `<div class="lozad scale-95 hover:scale-105 bg-white transition-transform duration-200 rounded-lg p-4 w-60 border border-2 border-neutral-600">`;
-      proxyGroupElement += `  <div id="countryFlag" class="absolute -translate-y-8 border-2 border-neutral-600 rounded-md overflow-hidden"><img width="40" src="https://flagcdn.com/w160/${proxyData.country.toLowerCase()}.png" /></div>`;
+      proxyGroupElement += `<div class="lozad scale-95 mb-2 bg-white dark:bg-neutral-800 transition-transform duration-200 rounded-lg p-4 w-60 border-2 border-neutral-800">`;
+      proxyGroupElement += `  <div id="countryFlag" class="absolute -translate-y-10 -translate-x-2 border-2 border-neutral-800 rounded-md overflow-hidden scale-75"><img height="20" src="https://flagcdn.com/h40/${proxyData.country.toLowerCase()}.png" /></div>`;
       proxyGroupElement += `  <div>`;
-      proxyGroupElement += `    <div id="ping-${i}" class="animate-pulse text-xs">Idle ${proxyData.proxyIP}:${proxyData.proxyPort}</div>`;
+      proxyGroupElement += `    <div id="ping-${i}" class="animate-pulse text-xs font-semibold dark:text-white">Idle ${proxyData.proxyIP}:${proxyData.proxyPort}</div>`;
       proxyGroupElement += `  </div>`;
-      proxyGroupElement += `  <h5 class="font-bold text-md text-neutral-900 mb-1 overflow-x-scroll scrollbar-hide text-nowrap">${proxyData.org}</h5>`;
-      proxyGroupElement += `  <div class="text-neutral-600 mb-2">`;
-      proxyGroupElement += `    <p>IP: ${proxyData.proxyIP}</p>`;
-      proxyGroupElement += `    <p>Port: ${proxyData.proxyPort}</p>`;
+      proxyGroupElement += `  <div class="rounded py-1 px-2 bg-amber-400 dark:bg-neutral-800 dark:border-2 dark:border-amber-400">`;
+      proxyGroupElement += `    <h5 class="font-bold text-md text-neutral-900 dark:text-white mb-1 overflow-x-scroll scrollbar-hide text-nowrap">${proxyData.org}</h5>`;
+      proxyGroupElement += `    <div class="text-neutral-900 dark:text-white text-sm">`;
+      proxyGroupElement += `      <p>IP: ${proxyData.proxyIP}</p>`;
+      proxyGroupElement += `      <p>Port: ${proxyData.proxyPort}</p>`;
+      proxyGroupElement += `    </div>`;
       proxyGroupElement += `  </div>`;
       proxyGroupElement += `  <div class="flex flex-col gap-2 mt-3 text-sm">`;
       for (let x = 0; x < proxyData.list.length; x++) {
@@ -970,7 +996,7 @@ class Document {
           proxyGroupElement += `<div class="flex gap-2 justify-around w-full">`;
         }
 
-        proxyGroupElement += `<button class="bg-blue-500 border border-2 border-neutral-700 rounded p-1 w-full text-white" onclick="copyToClipboard('${proxy}')">${indexName[x]}</button>`;
+        proxyGroupElement += `<button class="bg-blue-500 dark:bg-neutral-800 dark:border-2 dark:border-blue-500 rounded p-1 w-full text-white" onclick="copyToClipboard('${proxy}')">${indexName[x]}</button>`;
 
         if (x % 2 == 1) {
           proxyGroupElement += `</div>`;
@@ -992,7 +1018,7 @@ class Document {
 
     let flagElement = "";
     for (const flag of new Set(flagList)) {
-      flagElement += `<a href="/sub?cc=${flag}" class="py-1" ><img width=20 src="https://flagcdn.com/w80/${flag.toLowerCase()}.png" /></a>`;
+      flagElement += `<a href="/sub?cc=${flag}" class="py-1" ><img width=20 src="https://flagcdn.com/h80/${flag.toLowerCase()}.png" /></a>`;
     }
 
     this.html = this.html.replaceAll("PLACEHOLDER_BENDERA_NEGARA", flagElement);
@@ -1001,7 +1027,7 @@ class Document {
   addPageButton(text, link, isDisabled) {
     const pageButton = `<li><button ${
       isDisabled ? "disabled" : ""
-    } class="px-3 py-1 bg-yellow-300 border border-2 border-neutral-600 rounded" onclick=navigateTo('${link}')>${text}</button></li>`;
+    } class="px-3 py-1 bg-amber-400 border-2 border-neutral-800 rounded" onclick=navigateTo('${link}')>${text}</button></li>`;
 
     this.html = this.html.replaceAll("PLACEHOLDER_PAGE_BUTTON", `${pageButton}\nPLACEHOLDER_PAGE_BUTTON`);
   }
