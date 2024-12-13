@@ -773,6 +773,10 @@ let baseHTML = `
     <title>Proxy List</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+      body {
+        background-image: url("https://storage.googleapis.com/gweb-uniblog-publish-prod/original_images/IO_2021_heroes_1.jpg")
+      }
+
       /* For Webkit-based browsers (Chrome, Safari and Opera) */
       .scrollbar-hide::-webkit-scrollbar {
           display: none;
@@ -786,11 +790,11 @@ let baseHTML = `
     </style>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lozad/dist/lozad.min.js"></script>
   </head>
-  <body class="bg-neutral-50">
+  <body class="bg-white bg-fixed">
     <!-- Notification -->
     <div
       id="notification-badge"
-      class="fixed z-50 opacity-0 transition-opacity ease-in-out duration-300 mt-9 mr-6 right-0 p-3 max-w-sm bg-neutral-50 rounded-xl border border-2 border-neutral-700 flex items-center gap-x-4"
+      class="fixed z-50 opacity-0 transition-opacity ease-in-out duration-300 mt-9 mr-6 right-0 p-3 max-w-sm bg-white rounded-xl border border-2 border-neutral-700 flex items-center gap-x-4"
     >
       <div class="shrink-0">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#171717" class="size-6">
@@ -812,7 +816,7 @@ let baseHTML = `
     <!-- Select Country -->
     <div class="z-50">
       <div
-        class="h-full fixed top-0 w-14 bg-neutral-50 border-r-2 border-neutral-700 z-50 overflow-y-scroll scrollbar-hide"
+        class="h-full fixed top-0 w-14 bg-white border-r-2 border-neutral-700 z-50 overflow-y-scroll scrollbar-hide"
       >
         <div class="text-2xl flex flex-col items-center h-full gap-2">
           PLACEHOLDER_BENDERA_NEGARA
@@ -823,7 +827,7 @@ let baseHTML = `
     <div class="container mx-auto py-10 mt-28">
       <div
         id="container-title"
-        class="bg-neutral-50 border-b-2 border-neutral-700 fixed z-40 mx-auto pt-6 px-12 top-0 left-0 w-screen"
+        class="bg-white border-b-2 border-neutral-700 fixed z-40 mx-auto pt-6 px-12 top-0 left-0 w-screen"
       >
         <h1 class="text-xl text-center mb-6 text-stone-800">PLACEHOLDER_JUDUL</h1>
       </div>
@@ -894,10 +898,11 @@ let baseHTML = `
       }
 
       window.onload = () => {
+        checkProxy();
+
         const observer = lozad(".lozad", {
           load: function (el) {
-            el.classList.remove("scale-0");
-            checkProxy();
+            el.classList.remove("scale-95");
           },
         });
         observer.observe();
@@ -946,7 +951,7 @@ class Document {
       const proxyData = this.proxies[i];
 
       // Assign proxies
-      proxyGroupElement += `<div class="lozad scale-0 transition-transform duration-200 rounded-lg p-4 w-60 border border-2 border-neutral-600">`;
+      proxyGroupElement += `<div class="lozad scale-95 hover:scale-105 bg-white transition-transform duration-200 rounded-lg p-4 w-60 border border-2 border-neutral-600">`;
       proxyGroupElement += `  <div id="countryFlag" class="absolute -translate-y-8 border-2 border-neutral-600 rounded-md overflow-hidden"><img width="40" src="https://flagcdn.com/w160/${proxyData.country.toLowerCase()}.png" /></div>`;
       proxyGroupElement += `  <div>`;
       proxyGroupElement += `    <div id="ping-${i}" class="animate-pulse text-xs">Idle ${proxyData.proxyIP}:${proxyData.proxyPort}</div>`;
