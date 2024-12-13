@@ -10,10 +10,23 @@ Sebuah repository serverless tunnel studi kasus Indonesia
 - [x] Support TCP dan DoH
 - [x] Transport Websocket CDN dan SNI
 - [x] Pagination
+- [x] Tampilan web bagus dan minimalis (Menurut saya)
+- [x] Dark mode
+- [x] Auto check (ping) akun
 
 # Todo (Belum Selesai)
 
 - [x] Lebih efisien (Partial) (I hate Javascript btw, jadi males buat benerin)
+- [ ] Ambil akun dalam beberapa format (link, clash, sing-box)
+- [ ] Registrasi wildcard
+- [ ] Menambahkan filter
+  - [x] Negara `&cc=ID,SG,...`
+  - [ ] VPN `&vpn=vless,trojan,...`
+  - [ ] Region `&region=Asia,Europe,...`
+  - [ ] Limit `&limit=10`
+- [ ] Menambahkan filler
+  - [ ] Subdomain/Wildcard `&subdomain=zaintest.vuclip.com`
+- [ ] Subscription API
 - [ ] Skema URL shadowsocks
 - [ ] Tombol `Deploy to workers` untuk instant deployment
 
