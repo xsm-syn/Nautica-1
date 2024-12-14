@@ -876,10 +876,6 @@ let baseHTML = `
     <title>Proxy List</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      // body {
-      //   background-image: url("https://storage.googleapis.com/gweb-uniblog-publish-prod/original_images/IO_2021_heroes_1.jpg")
-      // }
-
       /* For Webkit-based browsers (Chrome, Safari and Opera) */
       .scrollbar-hide::-webkit-scrollbar {
           display: none;
@@ -955,22 +951,22 @@ let baseHTML = `
       <!-- Windows -->
       <!-- Informations -->
       <div class="fixed z-20 top-0 w-full h-full bg-white dark:bg-neutral-800">
-        <p id="container-window-info" class="text-center w-full h-full top-1/4 absolute"></p>
+        <p id="container-window-info" class="text-center w-full h-full top-1/4 absolute dark:text-white"></p>
       </div>
       <!-- Wildcards -->
       <div id="wildcards-window" class="fixed hidden z-20 top-0 right-0 w-full h-full flex justify-center items-center">
         <div class="w-[75%] h-[30%] flex flex-col gap-1 p-1 text-center rounded-md">
           <div class="basis-1/6 w-full h-full rounded-md">
-            <div class="flex w-full h-full gap-1">
+            <div class="flex w-full h-full gap-1 justify-between">
               <input
                 id="new-domain-input"
                 type="text"
                 placeholder="Input wildcard"
-                class="basis-11/12 w-full h-full px-6 rounded-md"
+                class="basis-11/12 w-full h-full px-6 rounded-md focus:outline-0"
               />
               <button
                 onclick="registerDomain()"
-                class="w-max h-max p-2 rounded-full bg-amber-400 flex justify-center items-center"
+                class="p-2 rounded-full bg-amber-400 flex justify-center items-center"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6">
                   <path
@@ -994,9 +990,7 @@ let baseHTML = `
 
     <footer>
       <div class="fixed bottom-3 right-3 flex flex-col gap-1 z-50">
-        <button onclick="toggleWildcardsWindow()" class="bg-indigo-400 rounded-full border-2 border-neutral-800 p-1 ${
-          isApiReady ? "block" : "hidden"
-        }">
+        <button onclick="toggleWildcardsWindow()" class="bg-indigo-400 rounded-full border-2 border-neutral-800 p-1 PLACEHOLDER_API_READY">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -1299,6 +1293,8 @@ class Document {
   build() {
     this.buildProxyGroup();
     this.buildCountryFlag();
+
+    this.html = this.html.replaceAll("PLACEHOLDER_API_READY", isApiReady ? "block" : "hidden");
 
     return this.html.replaceAll(/PLACEHOLDER_\w+/gim, "");
   }
