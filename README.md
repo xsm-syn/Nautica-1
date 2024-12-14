@@ -18,7 +18,7 @@ Sebuah repository serverless tunnel studi kasus Indonesia
 
 - [x] Lebih efisien (Partial) (I hate Javascript btw, jadi males buat benerin)
 - [ ] Ambil akun dalam beberapa format (link, clash, sing-box)
-- [ ] Registrasi wildcard
+- [x] Registrasi wildcard
 - [ ] Menambahkan filter
   - [x] Negara `&cc=ID,SG,...`
   - [ ] VPN `&vpn=vless,trojan,...`
@@ -49,6 +49,16 @@ Kode ini masih perlu banyak perbaikan, jadi silahkan berkontribusi dan berikan P
 
 - Contoh daftar proxy [proxyList.txt](https://raw.githubusercontent.com/dickymuliafiqri/Nautica/refs/heads/main/proxyList.txt)
 - Contoh reverse proxy [example.com](https://example.com)
+
+## Cara Aktivasi API
+
+Salah satu fungsi API adalah agar kalian bisa melihat dan menambahkan subdomain wildcards ke workers.
+
+Berikut cara aktivasinya:
+
+1. Masuk ke halaman editor workers yang sudah kalian buat
+2. Isi `variable` dari baris ke 4-9 sesuai dengan key yang kalian miliki
+3. Deploy
 
 # Endpoint
 

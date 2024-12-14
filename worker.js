@@ -1,6 +1,13 @@
 import { connect } from "cloudflare:sockets";
 
 // Variables
+const rootDomain = "foolvpn.me"; // Ganti dengan domain utama kalian
+const serviceName = "nautica"; // Ganti dengan nama workers kalian
+const apiKey = ""; // Ganti dengan Global API key kalian (https://dash.cloudflare.com/profile/api-tokens)
+const apiEmail = ""; // Ganti dengan email yang kalian gunakan
+const accountID = ""; // Ganti dengan Account ID kalian (https://dash.cloudflare.com -> Klik domain yang kalian gunakan)
+const zoneID = ""; // Ganti dengan Zone ID kalian (https://dash.cloudflare.com -> Klik domain yang kalian gunakan)
+let isApiReady = false;
 let proxyIP = "";
 let cachedProxyList = [];
 
@@ -15,7 +22,7 @@ const CORS_HEADER_OPTIONS = {
   "Access-Control-Max-Age": "86400",
 };
 
-async function getProxyList(env) {
+async function getProxyList(proxyBankUrl) {
   /**
    * Format:
    *
@@ -23,7 +30,6 @@ async function getProxyList(env) {
    * Contoh:
    * 1.1.1.1,443,SG,Cloudflare Inc.
    */
-  const proxyBankUrl = env.PROXY_BANK_URL || "";
   if (!proxyBankUrl) {
     throw new Error("No Proxy Bank URL Provided!");
   }
@@ -71,7 +77,7 @@ async function reverseProxy(request, target) {
   return newResponse;
 }
 
-function getAllConfig(hostName, proxyList, page = 0) {
+function getAllConfig(request, hostName, proxyList, page = 0) {
   const startIndex = PROXY_PER_PAGE * page;
 
   try {
@@ -86,7 +92,7 @@ function getAllConfig(hostName, proxyList, page = 0) {
     uri.searchParams.set("host", hostName);
 
     // Build HTML
-    const document = new Document();
+    const document = new Document(request);
     document.setTitle("Welcome to <span class='text-blue-500 font-semibold'>Nautica</span>");
     document.addInfo(`Total: ${proxyList.length}`);
     document.addInfo(`Page: ${page}/${Math.floor(proxyList.length / PROXY_PER_PAGE)}`);
@@ -160,9 +166,15 @@ export default {
         const pageIndex = parseInt(page ? page[1] : "0");
         const hostname = request.headers.get("Host");
 
+        // Gateway check
+        if (apiKey && apiEmail && accountID && zoneID) {
+          isApiReady = true;
+        }
+
         // Queries
         const countrySelect = url.searchParams.get("cc")?.split(",");
-        let proxyList = (await getProxyList(env)).filter((proxy) => {
+        const proxyBankUrl = url.searchParams.get("proxy-list") || env.PROXY_BANK_URL;
+        let proxyList = (await getProxyList(proxyBankUrl)).filter((proxy) => {
           // Filter proxies by Country
           if (countrySelect) {
             return countrySelect.includes(proxy.country);
@@ -171,7 +183,7 @@ export default {
           return true;
         });
 
-        const result = getAllConfig(hostname, proxyList, pageIndex);
+        const result = getAllConfig(request, hostname, proxyList, pageIndex);
         return new Response(result, {
           status: 200,
           headers: { "Content-Type": "text/html;charset=utf-8" },
@@ -188,6 +200,38 @@ export default {
             "Content-Type": "application/json",
           },
         });
+      } else if (url.pathname.startsWith("/api/v1")) {
+        const apiPath = url.pathname.replace("/api/v1", "");
+
+        if (!isApiReady) {
+          return new Response("Api not ready", {
+            status: 500,
+          });
+        }
+
+        if (apiPath.startsWith("/domains")) {
+          const wildcardApiPath = apiPath.replace("/domains", "");
+          const cloudflareApi = new CloudflareApi();
+
+          if (wildcardApiPath == "/get") {
+            const domains = await cloudflareApi.getDomainList();
+            return new Response(JSON.stringify(domains), {
+              headers: {
+                ...CORS_HEADER_OPTIONS,
+              },
+            });
+          } else if (wildcardApiPath == "/put") {
+            const domain = url.searchParams.get("domain");
+            const register = await cloudflareApi.registerDomain(domain);
+
+            return new Response(register.toString(), {
+              status: register,
+              headers: {
+                ...CORS_HEADER_OPTIONS,
+              },
+            });
+          }
+        }
       }
 
       const targetReverseProxy = env.REVERSE_PROXY_TARGET || "example.com";
@@ -759,6 +803,64 @@ function getFlagEmoji(isoCode) {
   return String.fromCodePoint(...codePoints);
 }
 
+// CloudflareApi Class
+class CloudflareApi {
+  constructor() {
+    this.bearer = `Bearer ${apiKey}`;
+    this.accountID = accountID;
+    this.zoneID = zoneID;
+    this.apiEmail = apiEmail;
+    this.apiKey = apiKey;
+
+    this.headers = {
+      Authorization: this.bearer,
+      "X-Auth-Email": this.apiEmail,
+      "X-Auth-Key": this.apiKey,
+    };
+  }
+
+  async getDomainList() {
+    const url = `https://api.cloudflare.com/client/v4/accounts/${this.accountID}/workers/domains`;
+    const res = await fetch(url, {
+      headers: {
+        ...this.headers,
+      },
+    });
+
+    if (res.status == 200) {
+      const respJson = await res.json();
+
+      return respJson.result.filter((data) => data.service == serviceName).map((data) => data.hostname);
+    }
+
+    return [];
+  }
+
+  async registerDomain(domain) {
+    domain = domain.toLowerCase();
+    const registeredDomains = await this.getDomainList();
+
+    if (!domain.endsWith(rootDomain)) return 400;
+    if (registeredDomains.includes(domain)) return 409;
+
+    const url = `https://api.cloudflare.com/client/v4/accounts/${this.accountID}/workers/domains`;
+    const res = await fetch(url, {
+      method: "PUT",
+      body: JSON.stringify({
+        environment: "production",
+        hostname: domain,
+        service: serviceName,
+        zone_id: this.zoneID,
+      }),
+      headers: {
+        ...this.headers,
+      },
+    });
+
+    return res.status;
+  }
+}
+
 // HTML page base
 /**
  * Cloudflare worker gak support DOM API, tetapi mereka menggunakan HTML Rewriter.
@@ -766,7 +868,7 @@ function getFlagEmoji(isoCode) {
  */
 let baseHTML = `
 <!DOCTYPE html>
-<html lang="en" id="html" class="scroll-auto">
+<html lang="en" id="html" class="scroll-auto scrollbar-hide">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -819,9 +921,9 @@ let baseHTML = `
       </div>
     </div>
     <!-- Select Country -->
-    <div class="z-50">
+    <div>
       <div
-        class="h-full fixed top-0 w-14 bg-white dark:bg-neutral-800 border-r-2 border-neutral-800 dark:border-white z-50 overflow-y-scroll scrollbar-hide"
+        class="h-full fixed top-0 w-14 bg-white dark:bg-neutral-800 border-r-2 border-neutral-800 dark:border-white z-20 overflow-y-scroll scrollbar-hide"
       >
         <div class="text-2xl flex flex-col items-center h-full gap-2">
           PLACEHOLDER_BENDERA_NEGARA
@@ -832,7 +934,7 @@ let baseHTML = `
     <div class="container mx-auto py-10 mt-28">
       <div
         id="container-title"
-        class="bg-white dark:bg-neutral-800 border-b-2 border-neutral-800 dark:border-white fixed z-40 mx-auto pt-6 px-12 top-0 left-0 w-screen"
+        class="bg-white dark:bg-neutral-800 border-b-2 border-neutral-800 dark:border-white fixed z-10 mx-auto pt-6 px-12 top-0 left-0 w-screen"
       >
         <h1 class="text-xl text-center mb-6 text-neutral-800 dark:text-white">PLACEHOLDER_JUDUL</h1>
       </div>
@@ -841,22 +943,157 @@ let baseHTML = `
       </div>
 
       <!-- Pagination -->
-      <nav id="container-pagination" class="mt-8 sticky bottom-0 right-0 left-0 transition -translate-y-6">
+      <nav id="container-pagination" class="mt-8 sticky bottom-0 right-0 left-0 transition -translate-y-6 z-20">
         <ul class="flex justify-center space-x-4">
           PLACEHOLDER_PAGE_BUTTON
         </ul>
       </nav>
     </div>
+
+    <div id="container-window" class="hidden">
+      <!-- Windows -->
+      <!-- Informations -->
+      <div class="fixed z-20 top-0 w-full h-full bg-white dark:bg-neutral-800">
+        <p id="container-window-info" class="text-center w-full h-full top-1/4 absolute"></p>
+      </div>
+      <!-- Wildcards -->
+      <div id="wildcards-window" class="fixed hidden z-20 top-0 right-0 w-full h-full flex justify-center items-center">
+        <div class="w-[75%] h-[30%] flex flex-col gap-1 p-1 text-center rounded-md">
+          <div class="basis-1/6 w-full h-full rounded-md">
+            <div class="flex w-full h-full gap-1">
+              <input
+                id="new-domain-input"
+                type="text"
+                placeholder="Input wildcard"
+                class="basis-11/12 w-full h-full px-6 rounded-md"
+              />
+              <button
+                onclick="registerDomain()"
+                class="w-max h-max p-2 rounded-full bg-amber-400 flex justify-center items-center"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6">
+                  <path
+                    fill-rule="evenodd"
+                    d="M16.72 7.72a.75.75 0 0 1 1.06 0l3.75 3.75a.75.75 0 0 1 0 1.06l-3.75 3.75a.75.75 0 1 1-1.06-1.06l2.47-2.47H3a.75.75 0 0 1 0-1.5h16.19l-2.47-2.47a.75.75 0 0 1 0-1.06Z"
+                    clip-rule="evenodd"
+                  ></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="basis-5/6 w-full h-full rounded-md">
+            <div
+              id="container-domains"
+              class="w-full h-full rounded-md flex flex-col gap-1 overflow-scroll scrollbar-hide"
+            ></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <footer>
-      <div>
-        <button onclick="toggleDarkMode()" class="fixed bg-amber-400 rounded-full z-50 right-3 bottom-3 border-2 border-neutral-800 p-1">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
+      <div class="fixed bottom-3 right-3 flex flex-col gap-1 z-50">
+        <button onclick="toggleWildcardsWindow()" class="bg-indigo-400 rounded-full border-2 border-neutral-800 p-1 ${
+          isApiReady ? "block" : "hidden"
+        }">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="size-6"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M9 9V4.5M9 9H4.5M9 9 3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5 5.25 5.25"
+            />
+          </svg>
+        </button>
+        <button onclick="toggleDarkMode()" class="bg-amber-400 rounded-full border-2 border-neutral-800 p-1">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="size-6"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"
+            ></path>
           </svg>
         </button>
       </div>
     </footer>
+
     <script>
+      // Shared
+      const rootDomain = "${serviceName}.${rootDomain}";
+      const windowContainer = document.getElementById("container-window");
+      const windowInfoContainer = document.getElementById("container-window-info");
+
+      // Switches
+      let isDomainListFetched = false;
+
+      function getDomainList() {
+        if (isDomainListFetched) return;
+        isDomainListFetched = true;
+
+        windowInfoContainer.innerText = "Fetching data...";
+
+        const url = "https://" + rootDomain + "/api/v1/domains/get";
+        const res = fetch(url).then(async (res) => {
+          const domainListContainer = document.getElementById("container-domains");
+          domainListContainer.innerHTML = "";
+
+          if (res.status == 200) {
+            windowInfoContainer.innerText = "Done!";
+            const respJson = await res.json();
+            for (const domain of respJson) {
+              const domainElement = document.createElement("p");
+              domainElement.classList.add("w-full", "bg-amber-400", "rounded-md");
+              domainElement.innerText = domain;
+              domainListContainer.appendChild(domainElement);
+            }
+          } else {
+            windowInfoContainer.innerText = "Failed!";
+          }
+        });
+      }
+
+      function registerDomain() {
+        const domainInputElement = document.getElementById("new-domain-input");
+        const rawDomain = domainInputElement.value.toLowerCase();
+        const domain = domainInputElement.value + "." + rootDomain;
+
+        if (!rawDomain.match(/\\w+\\.\\w+$/) || rawDomain.endsWith(rootDomain)) {
+          windowInfoContainer.innerText = "Invalid URL!";
+          return;
+        }
+
+        windowInfoContainer.innerText = "Pushing request...";
+
+        const url = "https://" + rootDomain + "/api/v1/domains/put?domain=" + domain;
+        const res = fetch(url).then((res) => {
+          if (res.status == 200) {
+            windowInfoContainer.innerText = "Done!";
+            domainInputElement.value = "";
+            isDomainListFetched = false;
+            getDomainList();
+          } else {
+            if (res.status == 409) {
+              windowInfoContainer.innerText = "Domain exists!";
+            } else {
+              windowInfoContainer.innerText = "Error " + res.statusText;
+            }
+          }
+        });
+      }
+
       function copyToClipboard(text) {
         const notification = document.getElementById("notification-badge");
         navigator.clipboard.writeText(text);
@@ -869,6 +1106,25 @@ let baseHTML = `
 
       function navigateTo(link) {
         window.location.href = link + window.location.search;
+      }
+
+      function toggleWildcardsWindow() {
+        toggleWindow();
+        getDomainList();
+        const rootElement = document.getElementById("wildcards-window");
+        if (rootElement.classList.contains("hidden")) {
+          rootElement.classList.remove("hidden");
+        } else {
+          rootElement.classList.add("hidden");
+        }
+      }
+
+      function toggleWindow() {
+        if (windowContainer.classList.contains("hidden")) {
+          windowContainer.classList.remove("hidden");
+        } else {
+          windowContainer.classList.add("hidden");
+        }
       }
 
       function toggleDarkMode() {
@@ -895,7 +1151,7 @@ let baseHTML = `
           let isActive = false;
           new Promise(async (resolve) => {
             for (const tls of [true, false]) {
-              const res = await fetch("https://nautica.foolvpn.me/check?target=" + target + "&tls=" + tls)
+              const res = await fetch("https://${serviceName}.${rootDomain}/check?target=" + target + "&tls=" + tls)
                 .then(async (res) => {
                   if (isActive) return;
                   if (res.status == 200) {
@@ -942,14 +1198,18 @@ let baseHTML = `
         }
       };
     </script>
-  </body>
+    </body>
+
 </html>
 `;
 
 class Document {
   proxies = [];
-  constructor() {
+
+  constructor(request) {
     this.html = baseHTML;
+    this.request = request;
+    this.url = new URL(this.request.url);
   }
 
   setTitle(title) {
@@ -1011,6 +1271,7 @@ class Document {
   }
 
   buildCountryFlag() {
+    const proxyBankUrl = this.url.searchParams.get("proxy-list");
     const flagList = [];
     for (const proxy of cachedProxyList) {
       flagList.push(proxy.country);
@@ -1018,7 +1279,9 @@ class Document {
 
     let flagElement = "";
     for (const flag of new Set(flagList)) {
-      flagElement += `<a href="/sub?cc=${flag}" class="py-1" ><img width=20 src="https://flagcdn.com/h80/${flag.toLowerCase()}.png" /></a>`;
+      flagElement += `<a href="/sub?cc=${flag}${
+        proxyBankUrl ? "&proxy-list=" + proxyBankUrl : ""
+      }" class="py-1" ><img width=20 src="https://flagcdn.com/h80/${flag.toLowerCase()}.png" /></a>`;
     }
 
     this.html = this.html.replaceAll("PLACEHOLDER_BENDERA_NEGARA", flagElement);
