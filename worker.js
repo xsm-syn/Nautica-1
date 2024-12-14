@@ -152,6 +152,12 @@ export default {
       const url = new URL(request.url);
       const upgradeHeader = request.headers.get("Upgrade");
 
+      // Gateway check
+      if (apiKey && apiEmail && accountID && zoneID) {
+        isApiReady = true;
+      }
+
+      // Handle proxy client
       if (upgradeHeader === "websocket") {
         const proxyMatch = url.pathname.match(/^\/(.+[:=-]\d+)$/);
 
@@ -165,11 +171,6 @@ export default {
         const page = url.pathname.match(/^\/sub\/(\d+)$/);
         const pageIndex = parseInt(page ? page[1] : "0");
         const hostname = request.headers.get("Host");
-
-        // Gateway check
-        if (apiKey && apiEmail && accountID && zoneID) {
-          isApiReady = true;
-        }
 
         // Queries
         const countrySelect = url.searchParams.get("cc")?.split(",");
