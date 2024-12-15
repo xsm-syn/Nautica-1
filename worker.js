@@ -12,6 +12,7 @@ let proxyIP = "";
 let cachedProxyList = [];
 
 // Constant
+const DOH_SERVER = "https://doh.dns.sb/dns-query";
 const PROXY_HEALTH_CHECK_API = "https://p01--boiling-frame--kw6dd7bjv2nr.code.run/check";
 const PROXY_PER_PAGE = 24;
 const WS_READY_STATE_OPEN = 1;
@@ -163,7 +164,7 @@ export default {
 
         if (proxyMatch) {
           proxyIP = proxyMatch[1];
-          return await websockerHandler(request);
+          return await websocketHandler(request);
         }
       }
 
@@ -248,7 +249,7 @@ export default {
   },
 };
 
-async function websockerHandler(request) {
+async function websocketHandler(request) {
   const webSocketPair = new WebSocketPair();
   const [client, webSocket] = Object.values(webSocketPair);
 
@@ -412,7 +413,7 @@ async function handleTCPOutBound(
 }
 
 async function handleUDPOutbound(webSocket, responseHeader, log) {
-  let isVlessHeaderSent = false;
+  let isHeaderSent = false;
   const transformStream = new TransformStream({
     start(controller) {},
     transform(chunk, controller) {
@@ -430,7 +431,7 @@ async function handleUDPOutbound(webSocket, responseHeader, log) {
     .pipeTo(
       new WritableStream({
         async write(chunk) {
-          const resp = await fetch("https://1.1.1.1/dns-query", {
+          const resp = await fetch(DOH_SERVER, {
             method: "POST",
             headers: {
               "content-type": "application/dns-message",
@@ -442,11 +443,11 @@ async function handleUDPOutbound(webSocket, responseHeader, log) {
           const udpSizeBuffer = new Uint8Array([(udpSize >> 8) & 0xff, udpSize & 0xff]);
           if (webSocket.readyState === WS_READY_STATE_OPEN) {
             log(`doh success and dns message length is ${udpSize}`);
-            if (isVlessHeaderSent) {
+            if (isHeaderSent) {
               webSocket.send(await new Blob([udpSizeBuffer, dnsQueryResult]).arrayBuffer());
             } else {
               webSocket.send(await new Blob([responseHeader, udpSizeBuffer, dnsQueryResult]).arrayBuffer());
-              isVlessHeaderSent = true;
+              isHeaderSent = true;
             }
           }
         },
