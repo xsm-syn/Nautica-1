@@ -13,12 +13,12 @@ Sebuah repository serverless tunnel studi kasus Indonesia
 - [x] Tampilan web bagus dan minimalis (Menurut saya)
 - [x] Dark mode
 - [x] Auto check (ping) akun
+- [x] Ambil akun dalam beberapa format (link, clash, sing-box, dll)
+- [x] Registrasi wildcard
 
 # Todo (Belum Selesai)
 
 - [x] Lebih efisien (Partial) (I hate Javascript btw, jadi males buat benerin)
-- [ ] Ambil akun dalam beberapa format (link, clash, sing-box)
-- [x] Registrasi wildcard
 - [ ] Menambahkan filter
   - [x] Negara `&cc=ID,SG,...`
   - [ ] VPN `&vpn=vless,trojan,...`
