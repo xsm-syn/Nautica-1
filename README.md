@@ -15,15 +15,12 @@ Sebuah repository serverless tunnel studi kasus Indonesia
 - [x] Auto check (ping) akun
 - [x] Ambil akun dalam beberapa format (link, clash, sing-box, dll)
 - [x] Registrasi wildcard
+- [x] Menambahkan filter
+  - [x] Negara `&cc=ID,SG,...`
 
 # Todo (Belum Selesai)
 
 - [x] Lebih efisien (Partial) (I hate Javascript btw, jadi males buat benerin)
-- [ ] Menambahkan filter
-  - [x] Negara `&cc=ID,SG,...`
-  - [ ] VPN `&vpn=vless,trojan,...`
-  - [ ] Region `&region=Asia,Europe,...`
-  - [ ] Limit `&limit=10`
 - [ ] Menambahkan filler
   - [ ] Subdomain/Wildcard `&subdomain=zaintest.vuclip.com`
 - [ ] Subscription API
@@ -36,6 +33,8 @@ Kode ini masih perlu banyak perbaikan, jadi silahkan berkontribusi dan berikan P
 
 - Harus UUID v4 Variant 2
 - Gunakan security `none`
+- Gunakan DoH di aplikasi VPN kalian jika tidak bisa browsing atau membuka website
+  - Contoh DoH `https://185.222.222.222/dns-query`
 
 # Cara Deploy
 
