@@ -12,6 +12,7 @@ let proxyIP = "";
 let cachedProxyList = [];
 
 // Constant
+const APP_DOMAIN = `${serviceName}.${rootDomain}`;
 const DOH_SERVER = "https://doh.dns.sb/dns-query";
 const PROXY_HEALTH_CHECK_API = "https://p01--boiling-frame--kw6dd7bjv2nr.code.run/check";
 const PROXY_PER_PAGE = 24;
@@ -845,6 +846,13 @@ class CloudflareApi {
     if (!domain.endsWith(rootDomain)) return 400;
     if (registeredDomains.includes(domain)) return 409;
 
+    try {
+      const domainTest = await fetch(`https://${domain.replaceAll("." + APP_DOMAIN, "")}`);
+      if (domainTest.status == 530) return 530;
+    } catch (e) {
+      return 400;
+    }
+
     const url = `https://api.cloudflare.com/client/v4/accounts/${this.accountID}/workers/domains`;
     const res = await fetch(url, {
       method: "PUT",
@@ -1144,7 +1152,7 @@ let baseHTML = `
             if (res.status == 409) {
               windowInfoContainer.innerText = "Domain exists!";
             } else {
-              windowInfoContainer.innerText = "Error " + res.statusText;
+              windowInfoContainer.innerText = "Error " + res.status;
             }
           }
         });
