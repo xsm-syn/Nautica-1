@@ -106,11 +106,11 @@ function getAllConfig(request, hostName, proxyList, page = 0) {
       const { proxyIP, proxyPort, country, org } = proxy;
 
       uri.searchParams.set("path", `/${proxyIP}-${proxyPort}`);
-      uri.hash = `${country} ${org}`;
 
       const proxies = [];
       for (const port of ports) {
         uri.port = port.toString();
+        uri.hash = `${i + 1} ${getFlagEmoji(country)} ${org} WS ${port == 443 ? "TLS" : "NTLS"} [${serviceName}]`;
         for (const protocol of protocols) {
           // Special exceptions
           if (protocol === "ss") {
