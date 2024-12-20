@@ -15,6 +15,7 @@ let cachedProxyList = [];
 const APP_DOMAIN = `${serviceName}.${rootDomain}`;
 const PORTS = [443, 80];
 const PROTOCOLS = ["trojan", "vless", "ss"];
+const PROXY_BANK_URL = "https://raw.githubusercontent.com/dickymuliafiqri/Nautica/refs/heads/main/proxyList.txt";
 const DOH_SERVER = "https://doh.dns.sb/dns-query";
 const PROXY_HEALTH_CHECK_API = "https://p01--boiling-frame--kw6dd7bjv2nr.code.run/check";
 const CONVERTER_URL =
@@ -28,7 +29,7 @@ const CORS_HEADER_OPTIONS = {
   "Access-Control-Max-Age": "86400",
 };
 
-async function getProxyList(proxyBankUrl) {
+async function getProxyList(proxyBankUrl = PROXY_BANK_URL) {
   /**
    * Format:
    *
