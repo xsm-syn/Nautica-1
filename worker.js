@@ -13,8 +13,12 @@ let cachedProxyList = [];
 
 // Constant
 const APP_DOMAIN = `${serviceName}.${rootDomain}`;
+const PORTS = [443, 80];
+const PROTOCOLS = ["trojan", "vless", "ss"];
 const DOH_SERVER = "https://doh.dns.sb/dns-query";
 const PROXY_HEALTH_CHECK_API = "https://p01--boiling-frame--kw6dd7bjv2nr.code.run/check";
+const CONVERTER_URL =
+  "https://script.google.com/macros/s/AKfycbwwVeHNUlnP92syOP82p1dOk_-xwBgRIxkTjLhxxZ5UXicrGOEVNc5JaSOu0Bgsx_gG/exec";
 const PROXY_PER_PAGE = 24;
 const WS_READY_STATE_OPEN = 1;
 const WS_READY_STATE_CLOSING = 2;
@@ -62,7 +66,7 @@ async function reverseProxy(request, target) {
   const targetChunk = target.split(":");
 
   targetUrl.hostname = targetChunk[0];
-  targetUrl.port = targetChunk.toString() || "443";
+  targetUrl.port = targetChunk[1]?.toString() || "443";
 
   const modifiedRequest = new Request(targetUrl, request);
 
@@ -84,8 +88,6 @@ function getAllConfig(request, hostName, proxyList, page = 0) {
 
   try {
     const uuid = crypto.randomUUID();
-    const ports = [443, 80];
-    const protocols = ["trojan", "vless", "ss"];
 
     // Build URI
     const uri = new URL(`trojan://${hostName}`);
@@ -108,10 +110,10 @@ function getAllConfig(request, hostName, proxyList, page = 0) {
       uri.searchParams.set("path", `/${proxyIP}-${proxyPort}`);
 
       const proxies = [];
-      for (const port of ports) {
+      for (const port of PORTS) {
         uri.port = port.toString();
         uri.hash = `${i + 1} ${getFlagEmoji(country)} ${org} WS ${port == 443 ? "TLS" : "NTLS"} [${serviceName}]`;
-        for (const protocol of protocols) {
+        for (const protocol of PROTOCOLS) {
           // Special exceptions
           if (protocol === "ss") {
             uri.username = btoa(`none:${uuid}`);
@@ -234,6 +236,95 @@ export default {
               },
             });
           }
+        } else if (apiPath.startsWith("/sub")) {
+          const filterCC = url.searchParams.get("cc")?.split(",") || [];
+          const filterPort = url.searchParams.get("port")?.split(",") || PORTS;
+          const filterVPN = url.searchParams.get("vpn")?.split(",") || PROTOCOLS;
+          const filterLimit = parseInt(url.searchParams.get("limit")) || 10;
+          const filterFormat = url.searchParams.get("format") || "raw";
+          const fillerDomain = url.searchParams.get("domain") || APP_DOMAIN;
+
+          const proxyBankUrl = url.searchParams.get("proxy-list") || env.PROXY_BANK_URL;
+          const proxyList = await getProxyList(proxyBankUrl)
+            .then((proxies) => {
+              // Filter CC
+              if (filterCC.length) {
+                return proxies.filter((proxy) => filterCC.includes(proxy.country));
+              }
+              return proxies;
+            })
+            .then((proxies) => {
+              // shuffle result
+              shuffleArray(proxies);
+              return proxies;
+            });
+
+          const uuid = crypto.randomUUID();
+          const result = [];
+          for (const proxy of proxyList) {
+            const uri = new URL(`trojan://${fillerDomain}`);
+            uri.searchParams.set("encryption", "none");
+            uri.searchParams.set("type", "ws");
+            uri.searchParams.set("host", APP_DOMAIN);
+
+            for (const port of filterPort) {
+              for (const protocol of filterVPN) {
+                if (result.length >= filterLimit) break;
+
+                uri.protocol = protocol;
+                uri.port = port.toString();
+                if (protocol == "ss") {
+                  uri.username = btoa(`none:${uuid}`);
+                } else {
+                  uri.username = uuid;
+                }
+
+                uri.searchParams.set("security", port == 443 ? "tls" : "none");
+                uri.searchParams.set("sni", port == 80 && protocol == "vless" ? "" : APP_DOMAIN);
+                uri.searchParams.set("path", `/${proxy.proxyIP}-${proxy.proxyPort}`);
+
+                uri.hash = `${result.length + 1} ${getFlagEmoji(proxy.country)} ${proxy.org} WS ${
+                  port == 443 ? "TLS" : "NTLS"
+                } [${serviceName}]`;
+                result.push(uri.toString());
+              }
+            }
+          }
+
+          let finalResult = "";
+          switch (filterFormat) {
+            case "raw":
+              finalResult = result.join("\n");
+              break;
+            case "clash":
+            case "sfa":
+            case "bfr":
+            case "v2ray":
+              const encodedResult = [];
+              for (const proxy of result) {
+                encodedResult.push(encodeURIComponent(proxy));
+              }
+
+              const res = await fetch(`${CONVERTER_URL}?target=${filterFormat}&url=${encodedResult.join(",")}`);
+              if (res.status == 200) {
+                finalResult = await res.text();
+              } else {
+                return new Response(res.statusText, {
+                  status: res.status,
+                  headers: {
+                    ...CORS_HEADER_OPTIONS,
+                  },
+                });
+              }
+              break;
+          }
+
+          return new Response(finalResult, {
+            status: 200,
+            headers: {
+              ...CORS_HEADER_OPTIONS,
+            },
+          });
         }
       }
 
@@ -787,6 +878,20 @@ function base64ToArrayBuffer(base64Str) {
 
 function arrayBufferToHex(buffer) {
   return [...new Uint8Array(buffer)].map((x) => x.toString(16).padStart(2, "0")).join("");
+}
+
+function shuffleArray(array) {
+  let currentIndex = array.length;
+
+  // While there remain elements to shuffle...
+  while (currentIndex != 0) {
+    // Pick a remaining element...
+    let randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+
+    // And swap it with the current element.
+    [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+  }
 }
 
 async function generateHashFromText(text) {
