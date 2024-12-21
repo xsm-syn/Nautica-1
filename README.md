@@ -24,13 +24,12 @@ Sebuah repository serverless tunnel studi kasus Indonesia
   - [x] VPN `&vpn=vless,trojan,ss`
   - [x] Port `&port=443,80`
   - [x] Domain `&domain=zoom.us`
+- [x] Tombol `Deploy to workers` untuk instant deployment
 
 # Todo (Belum Selesai)
 
 - [x] Lebih efisien (Partial) (I hate Javascript btw, jadi males buat benerin)
 - [ ] Skema URL shadowsocks
-- [ ] Tombol `Deploy to workers` untuk instant deployment
-   [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/dickymuliafiqri/Nautica)
 
 Kode ini masih perlu banyak perbaikan, jadi silahkan berkontribusi dan berikan PR kalian!
 
@@ -43,10 +42,15 @@ Kode ini masih perlu banyak perbaikan, jadi silahkan berkontribusi dan berikan P
 
 # Cara Deploy
 
+## Instant
+Klik tombol di bawah  
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/dickymuliafiqri/Nautica)
+
+## Manual
 1. Buat akun cloudflare
 2. Buat worker
-3. Copy kode dari `worker.js` ke editor cloudflare worker
-4. Masukkan link daftar proxy kalian ke dalam environemnt variable `PROXY_BANK_URL`
+3. Copy kode dari `_worker.js` ke editor cloudflare worker
+4. (Optional) Masukkan link daftar proxy kalian ke dalam environemnt variable `PROXY_BANK_URL`
 5. (Optional) Masukkan link target reverse proxy ke environment variable `REVERSE_PROXY_TARGET`
 6. Deploy
 7. Buka `https://DOMAIN_WORKER_KALIAN/sub`
