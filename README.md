@@ -30,6 +30,7 @@ Sebuah repository serverless tunnel studi kasus Indonesia
 - [x] Lebih efisien (Partial) (I hate Javascript btw, jadi males buat benerin)
 - [ ] Skema URL shadowsocks
 - [ ] Tombol `Deploy to workers` untuk instant deployment
+   [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/dickymuliafiqri/Nautica)
 
 Kode ini masih perlu banyak perbaikan, jadi silahkan berkontribusi dan berikan PR kalian!
 
