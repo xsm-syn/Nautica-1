@@ -209,13 +209,13 @@ export default {
       } else if (url.pathname.startsWith("/api/v1")) {
         const apiPath = url.pathname.replace("/api/v1", "");
 
-        if (!isApiReady) {
-          return new Response("Api not ready", {
-            status: 500,
-          });
-        }
-
         if (apiPath.startsWith("/domains")) {
+          if (!isApiReady) {
+            return new Response("Api not ready", {
+              status: 500,
+            });
+          }
+
           const wildcardApiPath = apiPath.replace("/domains", "");
           const cloudflareApi = new CloudflareApi();
 
@@ -326,6 +326,22 @@ export default {
               ...CORS_HEADER_OPTIONS,
             },
           });
+        } else if (apiPath.startsWith("/myip")) {
+          return new Response(
+            JSON.stringify({
+              ip:
+                request.headers.get("cf-connecting-ipv6") ||
+                request.headers.get("cf-connecting-ip") ||
+                request.headers.get("x-real-ip"),
+              colo: request.headers.get("cf-ray")?.split("-")[1],
+              ...request.cf,
+            }),
+            {
+              headers: {
+                ...CORS_HEADER_OPTIONS,
+              },
+            }
+          );
         }
       }
 
@@ -1041,19 +1057,30 @@ let baseHTML = `
       </div>
     </div>
     <!-- Main -->
-    <div class="container mx-auto py-10 mt-28">
+    <div id="container-header">
+      <div id="container-info" class="bg-amber-400 border-2 border-neutral-800 text-right px-5">
+        <div class="flex justify-end gap-3 text-sm">
+          <p id="container-info-ip">IP: 127.0.0.1</p>
+          <p id="container-info-country">Country: Indonesia</p>
+          <p id="container-info-isp">ISP: Localhost</p>
+        </div>
+      </div>
+    </div>
+    <div class="container">
       <div
         id="container-title"
-        class="bg-white dark:bg-neutral-800 border-b-2 border-neutral-800 dark:border-white fixed z-10 mx-auto pt-6 px-12 top-0 left-0 w-screen"
+        class="sticky bg-white dark:bg-neutral-800 border-b-2 border-neutral-800 dark:border-white z-10 py-6 w-screen"
       >
-        <h1 class="text-xl text-center mb-6 text-neutral-800 dark:text-white">PLACEHOLDER_JUDUL</h1>
+        <h1 class="text-xl text-center text-neutral-800 dark:text-white">
+          PLACEHOLDER_JUDUL
+        </h1>
       </div>
-      <div class="flex flex-col gap-6 items-center">
+      <div class="flex gap-6 pt-10 w-screen justify-center">
         PLACEHOLDER_PROXY_GROUP
       </div>
 
       <!-- Pagination -->
-      <nav id="container-pagination" class="mt-8 sticky bottom-0 right-0 left-0 transition -translate-y-6 z-20">
+      <nav id="container-pagination" class="w-screen mt-8 sticky bottom-0 right-0 left-0 transition -translate-y-6 z-20">
         <ul class="flex justify-center space-x-4">
           PLACEHOLDER_PAGE_BUTTON
         </ul>
@@ -1360,7 +1387,7 @@ let baseHTML = `
                 if (res.status == 200) {
                   pingElement.classList.remove("dark:text-white");
                   const jsonResp = await res.json();
-                  if (jsonResp.proxyip) {
+                  if (jsonResp.proxyip === true) {
                     isActive = true;
                     pingElement.textContent = "Active";
                     pingElement.classList.add("text-green-600");
@@ -1379,7 +1406,22 @@ let baseHTML = `
         }
       }
 
+      function checkGeoip() {
+        const containerIP = document.getElementById("container-info-ip");
+        const containerCountry = document.getElementById("container-info-country");
+        const containerISP = document.getElementById("container-info-isp");
+        const res = fetch("https://" + rootDomain + "/api/v1/myip").then(async (res) => {
+          if (res.status == 200) {
+            const respJson = await res.json();
+            containerIP.innerText = "IP: " + respJson.ip;
+            containerCountry.innerText = "Country: " + respJson.country;
+            containerISP.innerText = "ISP: " + respJson.asOrganization;
+          }
+        });
+      }
+
       window.onload = () => {
+        checkGeoip();
         checkProxy();
 
         const observer = lozad(".lozad", {
