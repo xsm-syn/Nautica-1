@@ -17,7 +17,7 @@ const PORTS = [443, 80];
 const PROTOCOLS = ["trojan", "vless", "ss"];
 const PROXY_BANK_URL = "https://raw.githubusercontent.com/dickymuliafiqri/Nautica/refs/heads/main/proxyList.txt";
 const DOH_SERVER = "https://doh.dns.sb/dns-query";
-const PROXY_HEALTH_CHECK_API = "https://p01--boiling-frame--kw6dd7bjv2nr.code.run/check";
+const PROXY_HEALTH_CHECK_API = "https://foolbot.azurewebsites.net/api/v1/proxy/check";
 const CONVERTER_URL =
   "https://script.google.com/macros/s/AKfycbwwVeHNUlnP92syOP82p1dOk_-xwBgRIxkTjLhxxZ5UXicrGOEVNc5JaSOu0Bgsx_gG/exec";
 const PROXY_PER_PAGE = 24;
@@ -62,12 +62,13 @@ async function getProxyList(proxyBankUrl = PROXY_BANK_URL) {
   return cachedProxyList;
 }
 
-async function reverseProxy(request, target) {
+async function reverseProxy(request, target, targetPath) {
   const targetUrl = new URL(request.url);
   const targetChunk = target.split(":");
 
   targetUrl.hostname = targetChunk[0];
   targetUrl.port = targetChunk[1]?.toString() || "443";
+  targetUrl.pathname = targetPath || targetUrl.pathname;
 
   const modifiedRequest = new Request(targetUrl, request);
 
@@ -196,8 +197,7 @@ export default {
         });
       } else if (url.pathname.startsWith("/check")) {
         const target = url.searchParams.get("target").split(":");
-        const tls = url.searchParams.get("tls");
-        const result = await checkProxyHealth(target[0], target[1] || "443", tls);
+        const result = await checkProxyHealth(target[0], target[1] || "443");
 
         return new Response(JSON.stringify(result), {
           status: 200,
@@ -855,10 +855,8 @@ function safeCloseWebSocket(socket) {
   }
 }
 
-async function checkProxyHealth(proxyIP, proxyPort, tls) {
-  const req = await fetch(
-    `${PROXY_HEALTH_CHECK_API}?ip=${proxyIP}&port=${proxyPort}&host=speed.cloudflare.com&tls=${tls}`
-  );
+async function checkProxyHealth(proxyIP, proxyPort) {
+  const req = await fetch(`${PROXY_HEALTH_CHECK_API}?ip=${proxyIP}:${proxyPort}`);
   return await req.json();
 }
 
@@ -1356,29 +1354,27 @@ let baseHTML = `
 
           let isActive = false;
           new Promise(async (resolve) => {
-            for (const tls of [true, false]) {
-              const res = await fetch("https://${serviceName}.${rootDomain}/check?target=" + target + "&tls=" + tls)
-                .then(async (res) => {
-                  if (isActive) return;
-                  if (res.status == 200) {
-                    pingElement.classList.remove("dark:text-white");
-                    const jsonResp = await res.json();
-                    if (jsonResp.proxyip) {
-                      isActive = true;
-                      pingElement.textContent = "Active";
-                      pingElement.classList.add("text-green-600");
-                    } else {
-                      pingElement.textContent = "Inactive";
-                      pingElement.classList.add("text-red-600");
-                    }
+            const res = await fetch("https://${serviceName}.${rootDomain}/check?target=" + target)
+              .then(async (res) => {
+                if (isActive) return;
+                if (res.status == 200) {
+                  pingElement.classList.remove("dark:text-white");
+                  const jsonResp = await res.json();
+                  if (jsonResp.proxyip) {
+                    isActive = true;
+                    pingElement.textContent = "Active";
+                    pingElement.classList.add("text-green-600");
                   } else {
-                    pingElement.textContent = "Check Failed!";
+                    pingElement.textContent = "Inactive";
+                    pingElement.classList.add("text-red-600");
                   }
-                })
-                .finally(() => {
-                  resolve(0);
-                });
-            }
+                } else {
+                  pingElement.textContent = "Check Failed!";
+                }
+              })
+              .finally(() => {
+                resolve(0);
+              });
           });
         }
       }
