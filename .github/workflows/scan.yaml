@@ -6,13 +6,16 @@ on:
     - cron: "0 */6 * * *"
 
 jobs:
-  fishing:
+  scanner:
     runs-on: ubuntu-latest
     concurrency:
       group: proxy-scan
 
     steps:
       - uses: actions/checkout@v3
+        with:
+          repository: "LalatinaHub/Mineral"
+          token: ${{ secrets.GIT_TOKEN }}
       - name: Use Bun
         uses: oven-sh/setup-bun@v2
       - name: Start Scan

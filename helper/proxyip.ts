@@ -24,7 +24,7 @@ interface ProxyTestResult {
 const RAW_PROXY_LIST_FILE = "./rawProxyList.txt";
 const PROXY_LIST_FILE = "./proxyList.txt";
 const IP_RESOLVER_DOMAIN = "https://id1.foolvpn.me/api/v1/check";
-const CONCURRENCY = 100;
+const CONCURRENCY = 99;
 
 const CHECK_QUEUE: string[] = [];
 
