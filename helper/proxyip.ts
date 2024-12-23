@@ -84,7 +84,7 @@ async function checkProxy(proxyAddress: string, proxyPort: number): Promise<Prox
     const proxyKey = `${proxy.address}:${proxy.port}`;
     if (!proxyChecked.includes(proxyKey)) {
       proxyChecked.push(proxyKey);
-      uniqueRawProxies.push(`${proxy.address},${proxy.port},${proxy.country},${proxy.org}`);
+      uniqueRawProxies.push(`${proxy.address},${proxy.port},${proxy.country},${proxy.org.replaceAll(/[+]/g, " ")}`);
     } else {
       continue;
     }
@@ -99,7 +99,7 @@ async function checkProxy(proxyAddress: string, proxyPort: number): Promise<Prox
           );
 
           proxySaved += 1;
-          console.log(`Proxy disimpan:`, proxySaved);
+          console.log(`[${CHECK_QUEUE.length}] Proxy disimpan:`, proxySaved);
         }
       })
       .finally(() => {
