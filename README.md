@@ -9,6 +9,7 @@ Sebuah repository serverless tunnel studi kasus Indonesia
 - [x] Cache daftar proxy
 - [x] Support TCP dan DoH
 - [x] Transport Websocket CDN dan SNI
+- [x] KV proxy key (proxy berdasarkan country)
 - [x] Pagination
 - [x] Tampilan web bagus dan minimalis (Menurut saya)
 - [x] Dark mode
@@ -43,10 +44,12 @@ Kode ini masih perlu banyak perbaikan, jadi silahkan berkontribusi dan berikan P
 # Cara Deploy
 
 ## Instant
+
 Klik tombol di bawah  
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/dickymuliafiqri/Nautica)
 
 ## Manual
+
 1. Buat akun cloudflare
 2. Buat worker
 3. Copy kode dari `_worker.js` ke editor cloudflare worker

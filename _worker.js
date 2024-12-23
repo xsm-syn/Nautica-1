@@ -15,6 +15,7 @@ let cachedProxyList = [];
 const APP_DOMAIN = `${serviceName}.${rootDomain}`;
 const PORTS = [443, 80];
 const PROTOCOLS = ["trojan", "vless", "ss"];
+const KV_PROXY_URL = "https://raw.githubusercontent.com/dickymuliafiqri/Nautica/refs/heads/main/kvProxyList.json";
 const PROXY_BANK_URL = "https://raw.githubusercontent.com/dickymuliafiqri/Nautica/refs/heads/main/proxyList.txt";
 const DOH_SERVER = "https://dns.quad9.net/dns-query";
 const PROXY_HEALTH_CHECK_API = "https://id1.foolvpn.me/api/v1/check";
@@ -28,6 +29,19 @@ const CORS_HEADER_OPTIONS = {
   "Access-Control-Allow-Methods": "GET,HEAD,POST,OPTIONS",
   "Access-Control-Max-Age": "86400",
 };
+
+async function getKVProxyList(kvProxyUrl = KV_PROXY_URL) {
+  if (!kvProxyUrl) {
+    throw new Error("No KV Proxy URL Provided!");
+  }
+
+  const kvProxy = await fetch(kvProxyUrl);
+  if (kvProxy.status == 200) {
+    return await kvProxy.json();
+  } else {
+    return {};
+  }
+}
 
 async function getProxyList(proxyBankUrl = PROXY_BANK_URL) {
   /**
@@ -167,7 +181,21 @@ export default {
       if (upgradeHeader === "websocket") {
         const proxyMatch = url.pathname.match(/^\/(.+[:=-]\d+)$/);
 
-        if (proxyMatch) {
+        if (url.pathname.length == 3) {
+          // Contoh: /ID, /SG, dll
+          const proxyKey = url.pathname.replace("/", "").toUpperCase();
+          let kvProxy = await env.nautica.get("kvProxy");
+          if (kvProxy) {
+            kvProxy = JSON.parse(kvProxy);
+          } else {
+            kvProxy = await getKVProxyList();
+            env.nautica.put(JSON.stringify(kvProxy));
+          }
+
+          proxyIP = kvProxy[proxyKey][Math.floor(Math.random() * kvProxy[proxyKey].length)];
+
+          return await websocketHandler(request);
+        } else if (proxyMatch) {
           proxyIP = proxyMatch[1];
           return await websocketHandler(request);
         }
