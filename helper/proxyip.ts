@@ -12,7 +12,7 @@ interface ProxyTestResult {
   message?: string;
   result?: {
     proxy: string;
-    proxyip: string;
+    proxyip: boolean;
     ip: string;
     port: number;
     delay: number;
@@ -87,7 +87,7 @@ async function checkProxy(proxyAddress: string, proxyPort: number): Promise<Prox
     CHECK_QUEUE.push(proxyKey);
     checkProxy(proxy.address, proxy.port)
       .then((res) => {
-        if (!res.error && res.result?.proxyip) {
+        if (!res.error && res.result?.proxyip == true) {
           appendFileSync(
             PROXY_LIST_FILE,
             `${res.result?.proxy},${res.result?.port},${res.result?.country},${res.result?.asOrganization}\n`
