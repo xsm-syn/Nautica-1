@@ -16,8 +16,8 @@ const APP_DOMAIN = `${serviceName}.${rootDomain}`;
 const PORTS = [443, 80];
 const PROTOCOLS = ["trojan", "vless", "ss"];
 const PROXY_BANK_URL = "https://raw.githubusercontent.com/dickymuliafiqri/Nautica/refs/heads/main/proxyList.txt";
-const DOH_SERVER = "https://doh.dns.sb/dns-query";
-const PROXY_HEALTH_CHECK_API = "https://foolbot.azurewebsites.net/api/v1/proxy/check";
+const DOH_SERVER = "https://dns.quad9.net/dns-query";
+const PROXY_HEALTH_CHECK_API = "https://id1.foolvpn.me/api/v1/check";
 const CONVERTER_URL =
   "https://script.google.com/macros/s/AKfycbwwVeHNUlnP92syOP82p1dOk_-xwBgRIxkTjLhxxZ5UXicrGOEVNc5JaSOu0Bgsx_gG/exec";
 const PROXY_PER_PAGE = 24;
@@ -998,7 +998,7 @@ class CloudflareApi {
  */
 let baseHTML = `
 <!DOCTYPE html>
-<html lang="en" id="html" class="scroll-auto scrollbar-hide">
+<html lang="en" id="html" class="scroll-auto scrollbar-hide dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
