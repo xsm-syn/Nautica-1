@@ -21,6 +21,7 @@ interface ProxyTestResult {
   };
 }
 
+const RAW_PROXY_LIST_FILE = "./rawProxyList.txt";
 const PROXY_LIST_FILE = "./proxyList.txt";
 const IP_RESOLVER_DOMAIN = "https://id1.foolvpn.me/api/v1/check";
 const CONCURRENCY = 100;
@@ -30,7 +31,7 @@ const CHECK_QUEUE: string[] = [];
 async function readProxyList(): Promise<ProxyStruct[]> {
   const proxyList: ProxyStruct[] = [];
 
-  const proxyListString = (await Bun.file("./proxyList.txt").text()).split("\n");
+  const proxyListString = (await Bun.file(RAW_PROXY_LIST_FILE).text()).split("\n");
   for (const proxy of proxyListString) {
     const [address, port, country, org] = proxy.split(",");
     proxyList.push({
@@ -71,15 +72,19 @@ async function checkProxy(proxyAddress: string, proxyPort: number): Promise<Prox
 }
 
 (async () => {
+  const start = new Date().getTime();
   const proxyList = await readProxyList();
   const proxyChecked: string[] = [];
+  const uniqueRawProxies: string[] = [];
 
   let proxySaved = 0;
+  let finish = new Date().getTime();
 
   for (const proxy of proxyList) {
     const proxyKey = `${proxy.address}:${proxy.port}`;
     if (!proxyChecked.includes(proxyKey)) {
       proxyChecked.push(proxyKey);
+      uniqueRawProxies.push(`${proxy.address},${proxy.port},${proxy.country},${proxy.org}`);
     } else {
       continue;
     }
@@ -94,15 +99,21 @@ async function checkProxy(proxyAddress: string, proxyPort: number): Promise<Prox
           );
 
           proxySaved += 1;
-          console.log(`Proxy disimpan: ${proxySaved}`);
+          console.log(`Proxy disimpan:`, proxySaved);
         }
       })
       .finally(() => {
         CHECK_QUEUE.pop();
+        finish = new Date().getTime();
       });
 
     if (CHECK_QUEUE.length >= CONCURRENCY) {
       await Bun.sleep(50);
     }
   }
+
+  await Bun.sleep(3000);
+  Bun.write(RAW_PROXY_LIST_FILE, uniqueRawProxies.join("\n"));
+
+  console.log(`Waktu proses: ${((finish - start) / 1000).toFixed(2)} detik`);
 })();
