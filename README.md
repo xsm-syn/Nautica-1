@@ -75,6 +75,7 @@ Berikut cara aktivasinya:
 
 - `/` -> Halaman utama reverse proxy
 - `/sub/:page` -> Halaman sub/list akun
+- `/api/v1/sub` -> Subscription link, [Queries](#fitur)
 
 # Footnote
 
