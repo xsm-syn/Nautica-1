@@ -71,6 +71,16 @@ Berikut cara aktivasinya:
 2. Isi `variable` dari baris ke 4-9 sesuai dengan key yang kalian miliki
 3. Deploy
 
+### Aktivasi Wildcard (Custom Domain)
+
+1. Selesaikan langkah [Aktivasi API](#cara-aktivasi-api)
+2. Isi variable `rootDomain` dengan domain utama kalian
+   - Contoh: Domain workers `nautica.foolvpn.me`, berarti domain utamanya adalah `foolvpn.me`
+3. Isi variable `serviceName` dengan nama workers kalian
+   - Contoh: Domain workers `nautica.foolvpn.me`, berarti nama workersnya adalah `nautica`
+4. Buat custom domain di pengaturan workers dengan kombinasi `serviceName`.`rootDomain`
+   - Contoh: `nautica.foolvpn.me`
+
 # Endpoint
 
 - `/` -> Halaman utama reverse proxy
