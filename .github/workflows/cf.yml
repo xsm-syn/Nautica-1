@@ -11,7 +11,7 @@ on:
       environment:
         description: 'wrangler env to deploy to'
         required: true
-        default: 'dev'
+        default: 'prod'
         type: choice
         options:
         - dev
@@ -26,8 +26,6 @@ on:
     # TODO: inputs.environment and inputs.commit
     branches:
       - "main"
-    tags:
-      - "v*"
     paths-ignore:
       - ".github/**"
       - "!.github/workflows/cf.yml"
