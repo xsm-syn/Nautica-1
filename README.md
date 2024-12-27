@@ -39,14 +39,14 @@ Kode ini masih perlu banyak perbaikan, jadi silahkan berkontribusi dan berikan P
 - Harus UUID v4 Variant 2
 - Gunakan security `none`
 - Gunakan DoH di aplikasi VPN kalian jika tidak bisa browsing atau membuka website
-  - Contoh DoH `https://185.222.222.222/dns-query`
+  - Contoh DoH `https://8.8.8.8/dns-query`
 
 # Cara Deploy
 
 ## Instant
 
 Klik tombol di bawah  
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/dickymuliafiqri/Nautica)
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/FoolVPN-ID/Nautica)
 
 ## Manual
 
