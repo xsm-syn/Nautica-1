@@ -17,11 +17,10 @@ const PORTS = [443, 80];
 const PROTOCOLS = ["trojan", "vless", "ss"];
 const KV_PROXY_URL = "https://raw.githubusercontent.com/FoolVPN-ID/Nautica/refs/heads/main/kvProxyList.json";
 const PROXY_BANK_URL = "https://raw.githubusercontent.com/FoolVPN-ID/Nautica/refs/heads/main/proxyList.txt";
-const DNS_SERVER_ADDRESS = "1.1.1.1";
+const DNS_SERVER_ADDRESS = "8.8.8.8";
 const DNS_SERVER_PORT = 53;
 const PROXY_HEALTH_CHECK_API = "https://id1.foolvpn.me/api/v1/check";
-const CONVERTER_URL =
-  "https://script.google.com/macros/s/AKfycbwwVeHNUlnP92syOP82p1dOk_-xwBgRIxkTjLhxxZ5UXicrGOEVNc5JaSOu0Bgsx_gG/exec";
+const CONVERTER_URL = "https://nautica-tool.azurewebsites.net/api/v1/convert";
 const DONATE_LINK = "https://trakteer.id/dickymuliafiqri/tip";
 const PROXY_PER_PAGE = 24;
 const WS_READY_STATE_OPEN = 1;
@@ -135,8 +134,15 @@ function getAllConfig(request, hostName, proxyList, page = 0) {
           // Special exceptions
           if (protocol === "ss") {
             uri.username = btoa(`none:${uuid}`);
+            uri.searchParams.set(
+              "plugin",
+              `v2ray-plugin${
+                port == 80 ? "" : ";tls"
+              };mux=0;mode=websocket;path=/${proxyIP}-${proxyPort};host=${hostName}`
+            );
           } else {
             uri.username = uuid;
+            uri.searchParams.delete("plugin");
           }
 
           uri.protocol = protocol;
@@ -309,6 +315,12 @@ export default {
                 uri.port = port.toString();
                 if (protocol == "ss") {
                   uri.username = btoa(`none:${uuid}`);
+                  uri.searchParams.set(
+                    "plugin",
+                    `v2ray-plugin${port == 80 ? "" : ";tls"};mux=0;mode=websocket;path=/${proxy.proxyIP}-${
+                      proxy.proxyPort
+                    };host=${APP_DOMAIN}`
+                  );
                 } else {
                   uri.username = uuid;
                 }
@@ -333,14 +345,16 @@ export default {
             case "clash":
             case "sfa":
             case "bfr":
-            case "v2ray":
-              const encodedResult = [];
-              for (const proxy of result) {
-                encodedResult.push(encodeURIComponent(proxy));
-              }
+              // case "v2ray":
 
-              // finalResult = `${CONVERTER_URL}?target=${filterFormat}&url=${encodedResult.join(",")}`;
-              const res = await fetch(`${CONVERTER_URL}?target=${filterFormat}&url=${encodedResult.join(",")}`);
+              const res = await fetch(CONVERTER_URL, {
+                method: "POST",
+                body: JSON.stringify({
+                  url: result.join(","),
+                  format: filterFormat,
+                  template: "cf",
+                }),
+              });
               if (res.status == 200) {
                 finalResult = await res.text();
               } else {
@@ -1426,7 +1440,7 @@ let baseHTML = `
                   const jsonResp = await res.json();
                   if (jsonResp.proxyip === true) {
                     isActive = true;
-                    pingElement.textContent = "Active " + jsonResp.delay + " ms";
+                    pingElement.textContent = "Active " + jsonResp.delay + " ms " + "(" + jsonResp.colo + ")";
                     pingElement.classList.add("text-green-600");
                   } else {
                     pingElement.textContent = "Inactive";
@@ -1439,6 +1453,26 @@ let baseHTML = `
               .finally(() => {
                 resolve(0);
               });
+          });
+        }
+      }
+
+      function checkRegion() {
+        for (let i = 0; ; i++) {
+          console.log("Halo " + i)
+          const containerRegionCheck = document.getElementById("container-region-check-" + i);
+          const configSample = document.getElementById("config-sample-" + i).value.replaceAll(" ", "");
+          if (containerRegionCheck == undefined) break;
+
+          const res = fetch(
+            "https://nautica-tool.azurewebsites.net/api/v1/regioncheck?config=" + encodeURIComponent(configSample)
+          ).then(async (res) => {
+            if (res.status == 200) {
+              containerRegionCheck.innerHTML = "<hr>";
+              for (const result of await res.json()) {
+                containerRegionCheck.innerHTML += "<p>" + result.name + ": " + result.region + "</p>";
+              }
+            }
           });
         }
       }
@@ -1460,6 +1494,7 @@ let baseHTML = `
       window.onload = () => {
         checkGeoip();
         checkProxy();
+        checkRegion();
 
         const observer = lozad(".lozad", {
           load: function (el) {
@@ -1526,6 +1561,9 @@ class Document {
       proxyGroupElement += `    <div class="text-neutral-900 dark:text-white text-sm">`;
       proxyGroupElement += `      <p>IP: ${proxyData.proxyIP}</p>`;
       proxyGroupElement += `      <p>Port: ${proxyData.proxyPort}</p>`;
+      proxyGroupElement += `      <div id="container-region-check-${i}">`;
+      proxyGroupElement += `        <input id="config-sample-${i}" class="hidden" type="text" value="${proxyData.list[0]}">`;
+      proxyGroupElement += `      </div>`;
       proxyGroupElement += `    </div>`;
       proxyGroupElement += `  </div>`;
       proxyGroupElement += `  <div class="flex flex-col gap-2 mt-3 text-sm">`;
