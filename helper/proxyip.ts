@@ -84,7 +84,9 @@ async function checkProxy(proxyAddress: string, proxyPort: number): Promise<Prox
     const proxyKey = `${proxy.address}:${proxy.port}`;
     if (!proxyChecked.includes(proxyKey)) {
       proxyChecked.push(proxyKey);
-      uniqueRawProxies.push(`${proxy.address},${proxy.port},${proxy.country},${proxy.org.replaceAll(/[+]/g, " ")}`);
+      uniqueRawProxies.push(
+        `${proxy.address},${proxy.port},${proxy.country},${(proxy.org || "").replaceAll(/[+]/g, " ")}`
+      );
     } else {
       continue;
     }
@@ -120,8 +122,8 @@ async function checkProxy(proxyAddress: string, proxyPort: number): Promise<Prox
     await Bun.sleep(1);
   }
 
-  uniqueRawProxies.sort(sortByCountry);
-  activeProxyList.sort(sortByCountry);
+  uniqueRawProxies.sort(customSortByCountry);
+  activeProxyList.sort(customSortByCountry);
 
   Bun.write(KV_PAIR_PROXY_FILE, JSON.stringify(kvPair, null, "  "));
   Bun.write(RAW_PROXY_LIST_FILE, uniqueRawProxies.join("\n"));
@@ -130,26 +132,17 @@ async function checkProxy(proxyAddress: string, proxyPort: number): Promise<Prox
   console.log(`Waktu proses: ${(Bun.nanoseconds() / 1000000000).toFixed(2)} detik`);
 })();
 
-function sortByCountry(a: string, b: string) {
+function customSortByCountry(a: string, b: string) {
   const priorityCountries = ["ID", "SG", "KR", "CN", "US", "MY"];
+  const getPriority = (country: string) => priorityCountries.indexOf(country) >= 0 ? priorityCountries.indexOf(country) : priorityCountries.length;
 
-  // Extract country codes from both entries
   const countryA = a.split(",")[2];
   const countryB = b.split(",")[2];
 
-  // Prioritize the specified countries
-  const indexA = priorityCountries.indexOf(countryA);
-  const indexB = priorityCountries.indexOf(countryB);
+  const priorityA = getPriority(countryA);
+  const priorityB = getPriority(countryB);
 
-  // If both countries are prioritized, sort by their index in the priority list
-  if (indexA !== -1 && indexB !== -1) {
-    return indexA - indexB;
-  }
+  if (priorityA !== priorityB) return priorityA - priorityB;
 
-  // If one of the countries is prioritized and the other is not, prioritize the one that is
-  if (indexA !== -1) return -1; // Prioritize country A
-  if (indexB !== -1) return 1; // Prioritize country B
-
-  // If both countries are not prioritized, sort alphabetically
   return countryA.localeCompare(countryB);
 }
